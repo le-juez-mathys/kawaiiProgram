@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte du corps — Académie Étoile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1224">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Étoile">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<div class="wrap">
+  <div id="minibar-container"></div>
+
+  <div class="section" style="border-top:1px solid var(--iron); padding-top:34px;">
+    <div class="section-head">
+      <div class="rune-mark">Anatomie féerique</div>
+      <h2>La carte du corps</h2>
+      <p class="lede">Survole ou clique une zone pour la voir s'illuminer sur le corps, et découvre les exercices qui la travaillent.</p>
+    </div>
+
+    <div class="bodymap-wrap" id="bodymap"></div>
+
+    <div class="zone-grid" id="zone-grid"></div>
+  </div>
+</div>
+
+<footer>Académie Étoile · tes données restent stockées sur cet appareil (stockage persistant du navigateur)</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  (async () => {
+    await initPage("corps");
+    document.getElementById("bodymap").innerHTML = bodyMapSVG();
+    highlightBodyZones("bodymap", []);
+
+    const grid = document.getElementById("zone-grid");
+    grid.innerHTML = Object.entries(ZONE_EXERCISES).map(([key, zone]) => `
+      <div class="zone-card" onmouseenter="highlightBodyZones('bodymap', ['${key}'])" onmouseleave="highlightBodyZones('bodymap', [])" onclick="highlightBodyZones('bodymap', ['${key}'])">
+        <div class="zc-label">${zone.label} <span style="font-family:var(--font-mono); font-size:10px; color:var(--parchment-dim);">(${zone.view === 'front' ? 'face' : 'dos'})</span></div>
+        <ul>${zone.exos.map(e => `<li>${e}</li>`).join("")}</ul>
+      </div>
+    `).join("");
+  })();
+</script>
+<script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker non enregistré :", err));
+    });
+  }
+</script>
+</body>
+</html>

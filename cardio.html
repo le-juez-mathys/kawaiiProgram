@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardio & Abdos — Académie Étoile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1224">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Étoile">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<div class="wrap">
+  <div id="minibar-container"></div>
+
+  <div class="section" style="border-top:1px solid var(--iron); padding-top:34px;">
+    <div class="section-head">
+      <div class="rune-mark">Quête · Endurance</div>
+      <h2>Cardio & Abdos</h2>
+      <p class="lede">C'est ici que le bidou fond vraiment. Pas de poids à renseigner pour la marche/vélo — coche-la simplement une fois faite. Pour les abdos, indique les répétitions si tu veux suivre ta progression.</p>
+    </div>
+
+    <div class="bodymap-wrap" id="bodymap" style="max-width:320px; margin:0 auto 20px;"></div>
+
+    <div id="exo-container"></div>
+
+    <div class="altar" style="margin-top:6px;">
+      <div class="form-row">
+        <label for="effort">Intensité ressentie</label>
+        <div class="range-row">
+          <input type="range" id="effort" min="1" max="3" value="2" step="1">
+          <span class="range-val" id="effort-label">Modérée</span>
+        </div>
+      </div>
+      <button class="btn" onclick="validateQuest()">Graver cette quête ⚔</button>
+    </div>
+  </div>
+</div>
+
+<footer>Académie Étoile · tes données restent stockées sur cet appareil (stockage persistant du navigateur)</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  (async () => {
+    await initPage("cardio");
+    buildExerciseInputs("exo-container", "cardio");
+    renderCategoryBodyMap("bodymap", "cardio");
+  })();
+
+  const EFFORT_LABELS = {1:"Légère", 2:"Modérée", 3:"Intense"};
+  document.getElementById("effort").addEventListener("input", e => {
+    document.getElementById("effort-label").textContent = EFFORT_LABELS[e.target.value];
+  });
+
+  function validateQuest(){
+    const entries = collectExerciseEntries("exo-container", "cardio");
+    const effort = parseInt(document.getElementById("effort").value, 10);
+    const result = logCategorySession("cardio", entries, effort);
+    buildExerciseInputs("exo-container", "cardio");
+    document.getElementById("minibar-container").innerHTML = renderMiniBar();
+    if(result.leveledUp){
+      showLevelUpToast();
+    } else {
+      showSimpleToast(`+${result.xpGain} XP · ${result.doneCount}/${result.total} exercices${result.prCount ? " · "+result.prCount+" record(s) !" : ""}`);
+    }
+  }
+</script>
+<script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker non enregistré :", err));
+    });
+  }
+</script>
+</body>
+</html>

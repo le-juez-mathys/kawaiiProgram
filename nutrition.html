@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Provisions — Académie Étoile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1224">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Étoile">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<div class="wrap">
+  <div id="minibar-container"></div>
+
+  <div class="section" style="border-top:1px solid var(--iron); padding-top:34px;">
+    <div class="section-head">
+      <div class="rune-mark">Quête · Vitalité</div>
+      <h2>Le festin scintillant</h2>
+      <p class="lede">On ne brille pas le ventre plein de sucre ni vide d'énergie. Objectif : léger déficit calorique + protéines élevées pour affiner la silhouette tout en gardant du tonus.</p>
+    </div>
+
+    <div class="nutri-grid">
+      <div class="nutri-card">
+        <h3>Les règles du festin</h3>
+        <div class="macro-row"><span>Déficit calorique</span><b>-300 à -500 kcal / jour</b></div>
+        <div class="macro-row"><span>Protéines</span><b>2 g / kg de poids de corps</b></div>
+        <div class="macro-row"><span>Glucides</span><b>autour des séances, le reste modéré</b></div>
+        <div class="macro-row"><span>Lipides</span><b>0.8–1 g / kg, sources saines</b></div>
+        <div class="macro-row"><span>Eau</span><b>1.5 à 2.5 L / jour</b></div>
+        <div class="macro-row"><span>Sommeil</span><b>7 à 9h — la vraie potion de régénération</b></div>
+      </div>
+
+      <div class="nutri-card">
+        <h3>Journée type scintillante</h3>
+        <ul>
+          <li><b>Réveil scintillant</b> — œufs ou skyr/fromage blanc + flocons d'avoine + fruit</li>
+          <li><b>Ration de midi</b> — féculent complet + légumes + viande blanche/poisson/tofu</li>
+          <li><b>Collation pétillante</b> — fruit + oléagineux ou yaourt protéiné</li>
+          <li><b>Festin du soir</b> — protéine + légumes à volonté + petite portion de féculent selon activité du jour</li>
+        </ul>
+      </div>
+
+      <div class="nutri-card">
+        <h3>Alliés à privilégier</h3>
+        <ul>
+          <li>Viandes maigres, poisson, œufs, légumineuses, tofu</li>
+          <li>Riz, patate douce, avoine, pain complet</li>
+          <li>Légumes à chaque repas</li>
+          <li>Fruits entiers plutôt que jus</li>
+          <li>Huile d'olive, oléagineux, avocat (modéré)</li>
+        </ul>
+      </div>
+
+      <div class="nutri-card">
+        <h3>Ennemis à limiter</h3>
+        <ul>
+          <li>Sodas et boissons sucrées</li>
+          <li>Fritures et fast-food réguliers</li>
+          <li>Alcool fréquent</li>
+          <li>Grignotage nocturne hors faim réelle</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Ravitaillement</div>
+      <h2>Le menu de la semaine</h2>
+      <p class="lede">Le menu change automatiquement chaque semaine (3 semaines qui tournent) pour éviter la lassitude. Tu peux aussi consulter les autres semaines à l'avance.</p>
+    </div>
+
+    <div class="week-select-row">
+      <label for="week-select" style="font-family:var(--font-mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold);">Semaine affichée</label>
+      <select id="week-select" style="max-width:260px;"></select>
+      <button class="btn secondary" onclick="downloadShoppingList()">Télécharger la liste de courses ⤓</button>
+      <button class="btn secondary" onclick="downloadRecipes()">Télécharger les recettes ⤓</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="menu" id="menu-table"></table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">En cas de fringale</div>
+      <h2>Solutions anti-fringale</h2>
+      <p class="lede">Une envie entre les repas ? Pioche ici plutôt que dans le placard à sucreries.</p>
+    </div>
+    <div class="snack-grid" id="snack-grid"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Check-in du jour</div>
+      <h2>Enregistrer ta journée</h2>
+      <p class="lede">Fais le point sur ta journée alimentaire pour renforcer ta Vitalité et ta Discipline.</p>
+    </div>
+
+    <div class="altar">
+      <div class="check-row">
+        <input type="checkbox" id="obj-calorique">
+        <label for="obj-calorique">J'ai respecté mon objectif calorique aujourd'hui</label>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="obj-proteines">
+        <label for="obj-proteines">J'ai atteint mon objectif de protéines</label>
+      </div>
+      <div class="form-row">
+        <label for="eau">Eau bue (litres)</label>
+        <input type="number" id="eau" min="0" step="0.1" value="1.5" style="max-width:140px;">
+      </div>
+      <div class="form-row">
+        <label for="poids-jour">Poids du jour (kg) — optionnel, juste pour ton suivi</label>
+        <input type="number" id="poids-jour" min="0" step="0.1" style="max-width:140px;" placeholder="ex: 82.4">
+      </div>
+      <button class="btn" onclick="validateNutrition()">Graver cette journée ⚔</button>
+    </div>
+  </div>
+</div>
+
+<footer>Académie Étoile · tes données restent stockées sur cet appareil (stockage persistant du navigateur)</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  let selectedWeek = currentWeekIndex();
+
+  function renderWeekSelect(){
+    const sel = document.getElementById("week-select");
+    sel.innerHTML = WEEKLY_MENUS.map((w, i) =>
+      `<option value="${i}" ${i === selectedWeek ? "selected" : ""}>${w.name}${i === currentWeekIndex() ? " (cette semaine)" : ""}</option>`
+    ).join("");
+    sel.addEventListener("change", e => {
+      selectedWeek = parseInt(e.target.value, 10);
+      renderMenuTable();
+    });
+  }
+
+  function renderMenuTable(){
+    const week = WEEKLY_MENUS[selectedWeek];
+    const table = document.getElementById("menu-table");
+    table.innerHTML = `
+      <tr><th>Jour</th><th>Petit-déjeuner</th><th>Déjeuner</th><th>Dîner</th></tr>
+      ${week.days.map(d => `
+        <tr>
+          <td class="day-cell">${d.day}</td>
+          <td>${d.breakfast.name}</td>
+          <td>${d.lunch.name}</td>
+          <td>${d.dinner.name}</td>
+        </tr>
+      `).join("")}
+    `;
+  }
+
+  function downloadShoppingList(){
+    const text = generateShoppingListText(selectedWeek);
+    const filename = "courses-" + WEEKLY_MENUS[selectedWeek].name.toLowerCase().replace(/\s+/g, "-") + ".txt";
+    downloadTextFile(filename, text);
+  }
+
+  function downloadRecipes(){
+    const text = generateRecipesText(selectedWeek);
+    const filename = "recettes-" + WEEKLY_MENUS[selectedWeek].name.toLowerCase().replace(/\s+/g, "-") + ".txt";
+    downloadTextFile(filename, text);
+  }
+
+  function renderSnacks(){
+    document.getElementById("snack-grid").innerHTML = SNACKS_FRINGALE.map(s => `
+      <div class="snack-card">
+        <div class="sc-name">${s.name}</div>
+        <div class="sc-note">${s.note}</div>
+      </div>
+    `).join("");
+  }
+
+  (async () => {
+    await initPage("nutrition");
+    renderWeekSelect();
+    renderMenuTable();
+    renderSnacks();
+  })();
+
+  function validateNutrition(){
+    const objCal = document.getElementById("obj-calorique").checked;
+    const objProt = document.getElementById("obj-proteines").checked;
+    const eau = parseFloat(document.getElementById("eau").value) || 0;
+    const poids = parseFloat(document.getElementById("poids-jour").value) || null;
+
+    if(poids){
+      const rec = state.records["poids-du-jour"];
+      state.records["poids-du-jour"] = { name: "Poids du jour", weight: poids, date: new Date().toISOString() };
+    }
+
+    const result = logNutritionDay(objCal, objProt, eau);
+    document.getElementById("minibar-container").innerHTML = renderMiniBar();
+    if(result.leveledUp){
+      showLevelUpToast();
+    } else {
+      showSimpleToast(`+${result.xpGain} XP · journée gravée`);
+    }
+  }
+</script>
+<script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker non enregistré :", err));
+    });
+  }
+</script>
+</body>
+</html>

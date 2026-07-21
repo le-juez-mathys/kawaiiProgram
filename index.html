@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableau de bord — Académie Étoile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1224">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Étoile">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<div class="hero">
+  <div class="eyebrow">Une saga personnelle · scintillante pour toi</div>
+  <h1>TABLEAU DE BORD</h1>
+  <p class="sub">L'état de ta légende, en un coup d'œil. Choisis ta prochaine quête ci-dessous.</p>
+</div>
+
+<div class="wrap">
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Feuille de personnage</div>
+      <h2>Ton état actuel</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 260px; gap:16px; align-items:start;" id="sheet-grid">
+      <div class="sheet" id="full-sheet"></div>
+      <div class="avatar-panel" id="avatar-panel"></div>
+    </div>
+    <div class="lede" id="pace-estimate" style="text-align:center; margin-top:14px;"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Choisis ta quête</div>
+      <h2>Catégories d'entraînement</h2>
+      <p class="lede">Chaque carte mène à une page dédiée où tu détailles ta séance : poids soulevé, répétitions, exercices accomplis.</p>
+    </div>
+    <div class="cat-grid" id="cat-grid"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Historique</div>
+      <h2>La chronique</h2>
+      <p class="lede">Toutes tes quêtes accomplies, gravées pour la postérité.</p>
+    </div>
+    <div class="chronicle-list" id="chronicle-list"></div>
+    <div style="margin-top:18px;">
+      <button class="btn secondary" onclick="resetCharacter()">Réinitialiser le personnage</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>Académie Étoile · tes données restent stockées sur cet appareil (stockage persistant du navigateur)</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  (async () => {
+    await initPage("index");
+    renderFullSheet("full-sheet");
+    renderAvatarWidget("avatar-panel");
+    renderPaceEstimate("pace-estimate");
+    renderDashboardCards("cat-grid");
+    renderChronicle("chronicle-list");
+  })();
+</script>
+<script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker non enregistré :", err));
+    });
+  }
+</script>
+</body>
+</html>
