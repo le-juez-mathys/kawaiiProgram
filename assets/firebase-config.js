@@ -60,13 +60,14 @@
    ========================================================= */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAPyWeZNsqKjguEDqUsrsqGv0ow9LXVsIE",
-  authDomain: "vikingprogram-7e9fb.firebaseapp.com",
-  projectId: "vikingprogram-7e9fb",
-  storageBucket: "vikingprogram-7e9fb.firebasestorage.app",
-  messagingSenderId: "227578269615",
-  appId: "1:227578269615:web:0f9ac4a0a5ebfe4800695a"
+  apiKey: "AIzaSyADeNeq0ol97SHlhUYmmZKRUkHWyoasihA",
+  authDomain: "kawaiiprogram-1d64b.firebaseapp.com",
+  projectId: "kawaiiprogram-1d64b",
+  storageBucket: "kawaiiprogram-1d64b.firebasestorage.app",
+  messagingSenderId: "883067258083",
+  appId: "1:883067258083:web:b9b37a4ef0afcd6e7af1d6"
 };
+
 
 let db;
 try{
