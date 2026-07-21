@@ -31,9 +31,37 @@
       <p class="lede">On ne brille pas le ventre plein de sucre ni vide d'énergie. Objectif : léger déficit calorique + protéines élevées pour affiner la silhouette tout en gardant du tonus.</p>
     </div>
 
+    <div class="altar" style="margin-bottom:28px;">
+      <h3 style="font-family:var(--font-display); color:var(--gold-bright); margin-bottom:14px; font-size:16px;">✨ Calculateur personnalisé</h3>
+      <div class="lede" style="margin-top:0; margin-bottom:16px;">Renseigne tes chiffres pour obtenir tes propres objectifs (pas des règles génériques) — recalculé instantanément.</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:14px; margin-bottom:16px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-poids">Poids (kg)</label>
+          <input type="number" id="calc-poids" value="75" min="30" step="0.5">
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-taille">Taille (cm)</label>
+          <input type="number" id="calc-taille" value="168" min="120" step="1">
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-age">Âge</label>
+          <input type="number" id="calc-age" value="25" min="14" step="1">
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-activite">Niveau d'activité</label>
+          <select id="calc-activite">
+            <option value="1.3">Peu active (assise, peu de sport)</option>
+            <option value="1.45" selected>Modérée (3-5 séances/semaine)</option>
+            <option value="1.6">Active (sport quasi quotidien)</option>
+          </select>
+        </div>
+      </div>
+      <div id="calc-results" class="nutri-grid"></div>
+    </div>
+
     <div class="nutri-grid">
       <div class="nutri-card">
-        <h3>Les règles du festin</h3>
+        <h3>Les règles générales du festin</h3>
         <div class="macro-row"><span>Déficit calorique</span><b>-300 à -500 kcal / jour</b></div>
         <div class="macro-row"><span>Protéines</span><b>2 g / kg de poids de corps</b></div>
         <div class="macro-row"><span>Glucides</span><b>autour des séances, le reste modéré</b></div>
@@ -190,11 +218,55 @@
     `).join("");
   }
 
+  function calculerObjectifs(){
+    const poids = parseFloat(document.getElementById("calc-poids").value) || 0;
+    const taille = parseFloat(document.getElementById("calc-taille").value) || 0;
+    const age = parseFloat(document.getElementById("calc-age").value) || 0;
+    const activite = parseFloat(document.getElementById("calc-activite").value) || 1.4;
+    const el = document.getElementById("calc-results");
+
+    if(poids <= 0 || taille <= 0 || age <= 0){
+      el.innerHTML = '<div class="empty-note">Renseigne poids, taille et âge pour voir tes objectifs.</div>';
+      return;
+    }
+
+    // Formule de Mifflin-St Jeor (femme)
+    const bmr = 10*poids + 6.25*taille - 5*age - 161;
+    const tdee = bmr * activite;
+    const deficitBas = tdee - 300;
+    const deficitHaut = tdee - 500;
+    const proteines = Math.round(poids * 2);
+    const lipidesBas = Math.round(poids * 0.8);
+    const lipidesHaut = Math.round(poids * 1);
+    const eauL = (poids * 0.035).toFixed(1);
+
+    el.innerHTML = `
+      <div class="nutri-card">
+        <h3>Ton estimation</h3>
+        <div class="macro-row"><span>Dépense estimée (maintien)</span><b>${Math.round(tdee)} kcal</b></div>
+        <div class="macro-row"><span>Objectif calorique</span><b>${Math.round(deficitHaut)} à ${Math.round(deficitBas)} kcal</b></div>
+        <div class="macro-row"><span>Protéines cibles</span><b>${proteines} g / jour</b></div>
+        <div class="macro-row"><span>Lipides cibles</span><b>${lipidesBas} à ${lipidesHaut} g / jour</b></div>
+        <div class="macro-row"><span>Eau conseillée</span><b>${eauL} L / jour</b></div>
+      </div>
+      <div class="nutri-card">
+        <h3>Comment lire ces chiffres</h3>
+        <p>Ce sont des <b>estimations</b> basées sur la formule de Mifflin-St Jeor, pas une mesure exacte — le métabolisme réel varie d'une personne à l'autre.</p>
+        <p style="margin-top:8px;">Pèse-toi 1 à 2 fois par semaine, à jeun, toujours dans les mêmes conditions. Si le poids ne bouge pas après 2-3 semaines à l'objectif bas, retire encore 100-150 kcal.</p>
+      </div>
+    `;
+  }
+
   (async () => {
     await initPage("nutrition");
     renderWeekSelect();
     renderMenuTable();
     renderSnacks();
+    calculerObjectifs();
+    ["calc-poids","calc-taille","calc-age","calc-activite"].forEach(id => {
+      document.getElementById(id).addEventListener("input", calculerObjectifs);
+      document.getElementById(id).addEventListener("change", calculerObjectifs);
+    });
   })();
 
   function validateNutrition(){
