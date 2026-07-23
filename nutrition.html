@@ -33,15 +33,22 @@
 
     <div class="altar" style="margin-bottom:28px;">
       <h3 style="font-family:var(--font-display); color:var(--gold-bright); margin-bottom:14px; font-size:16px;">✨ Calculateur personnalisé</h3>
-      <div class="lede" style="margin-top:0; margin-bottom:16px;">Renseigne tes chiffres pour obtenir tes propres objectifs (pas des règles génériques) — recalculé instantanément.</div>
+      <div class="lede" style="margin-top:0; margin-bottom:16px;">Renseigne tes chiffres pour obtenir tes propres objectifs (pas des règles génériques) — recalculé instantanément et <b>mémorisé</b> : reviens changer ton poids quand tu veux, tout se recalcule automatiquement (quantités des repas, objectif protéines, calories).</div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:14px; margin-bottom:16px;">
         <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-sexe">Sexe (pour le calcul)</label>
+          <select id="calc-sexe">
+            <option value="femme" selected>Femme</option>
+            <option value="homme">Homme</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
           <label for="calc-poids">Poids (kg)</label>
-          <input type="number" id="calc-poids" value="75" min="30" step="0.5">
+          <input type="number" id="calc-poids" value="60" min="30" step="0.5">
         </div>
         <div class="form-row" style="margin-bottom:0;">
           <label for="calc-taille">Taille (cm)</label>
-          <input type="number" id="calc-taille" value="168" min="120" step="1">
+          <input type="number" id="calc-taille" value="165" min="120" step="1">
         </div>
         <div class="form-row" style="margin-bottom:0;">
           <label for="calc-age">Âge</label>
@@ -55,8 +62,31 @@
             <option value="1.6">Active (sport quasi quotidien)</option>
           </select>
         </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-deficit">Objectif</label>
+          <select id="calc-deficit">
+            <option value="-300">Prise de masse légère (+300 kcal)</option>
+            <option value="0">Maintien (0 kcal)</option>
+            <option value="300">Perte de poids légère (-300 kcal)</option>
+            <option value="500" selected>Perte de poids modérée (-500 kcal)</option>
+            <option value="750">Sèche agressive (-750 kcal)</option>
+          </select>
+        </div>
       </div>
       <div id="calc-results" class="nutri-grid"></div>
+    </div>
+
+    <div class="altar" style="margin-bottom:28px;">
+      <h3 style="font-family:var(--font-display); color:var(--gold-bright); margin-bottom:14px; font-size:16px;">⚖ Objectif de perte de poids</h3>
+      <div class="lede" style="margin-top:0; margin-bottom:16px;">Indique combien de kilos tu veux perdre : ça s'ajuste automatiquement à ton poids et à ton déficit choisis ci-dessus.</div>
+      <div style="display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="goal-poids-a-perdre">Poids à perdre (kg)</label>
+          <input type="number" id="goal-poids-a-perdre" min="0" step="0.5" placeholder="ex: 5" style="max-width:140px;">
+        </div>
+        <button class="btn secondary" onclick="resetWeightGoalAndRender()">Réinitialiser</button>
+      </div>
+      <div id="weight-goal-results" class="nutri-grid"></div>
     </div>
 
     <div class="nutri-grid">
@@ -105,20 +135,143 @@
 
   <div class="section">
     <div class="section-head">
+      <div class="rune-mark">Suivi du jour</div>
+      <h2>Journal calorique</h2>
+      <p class="lede">Clique "J'ai mangé ce repas" sur le petit-déj ou "Compose ton repas" ci-dessous pour l'ajouter ici. Remise à zéro automatique chaque nouveau jour.</p>
+    </div>
+    <div class="altar">
+      <div id="daily-log-panel"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
       <div class="rune-mark">Ravitaillement</div>
-      <h2>Le menu de la semaine</h2>
-      <p class="lede">Le menu change automatiquement chaque semaine (3 semaines qui tournent) pour éviter la lassitude. Tu peux aussi consulter les autres semaines à l'avance.</p>
+      <h2>Compose ton repas</h2>
+      <p class="lede">C'est toi qui choisis tout : la protéine, le féculent, le légume et l'assaisonnement. L'appli propose juste des quantités de départ (ajustées à ton objectif protéines et au mode Sèche), mais tu peux toutes les modifier avant d'ajouter à ta liste.</p>
     </div>
 
-    <div class="week-select-row">
-      <label for="week-select" style="font-family:var(--font-mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold);">Semaine affichée</label>
-      <select id="week-select" style="max-width:260px;"></select>
-      <button class="btn secondary" onclick="downloadShoppingList()">Télécharger la liste de courses ⤓</button>
-      <button class="btn secondary" onclick="downloadRecipes()">Télécharger les recettes ⤓</button>
-    </div>
+    <div class="altar">
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="mode-normal" onclick="setDietMode('normal')">Normal</button>
+        <button class="mode-btn" id="mode-seche" onclick="setDietMode('seche')">Sèche</button>
+      </div>
+      <div class="mode-note" id="mode-note">Mode Normal — quantités standards.</div>
 
-    <div style="overflow-x:auto;">
-      <table class="menu" id="menu-table"></table>
+      <div class="form-row" style="margin-bottom:0;">
+        <label>1. Choisis ta protéine</label>
+      </div>
+      <div class="protein-grid" id="protein-grid"></div>
+
+      <div id="meal-result" style="display:none; margin-top:20px;">
+        <div class="meal-select-row">
+          <label>Protéine</label>
+          <span style="flex:1; color:var(--parchment); font-family:var(--font-display);" id="meal-protein-name"></span>
+          <input type="number" id="meal-qty-protein" min="0" step="5">
+          <span class="unit-label" id="meal-unit-protein"></span>
+        </div>
+        <div class="meal-select-row">
+          <label>2. Féculent</label>
+          <select id="meal-select-starch" onchange="onStarchChange()">
+            <option value="">-- choisis --</option>
+          </select>
+          <input type="number" id="meal-qty-starch" min="0" step="5">
+          <span class="unit-label" id="meal-unit-starch"></span>
+        </div>
+        <div class="meal-select-row">
+          <label>3. Légume</label>
+          <select id="meal-select-veg" onchange="onVegChange()">
+            <option value="">-- choisis --</option>
+          </select>
+          <input type="number" id="meal-qty-veg" min="0" step="5">
+          <span class="unit-label" id="meal-unit-veg"></span>
+        </div>
+        <div class="meal-select-row">
+          <label>4. Assaisonnement</label>
+          <select id="meal-select-seasoning" onchange="onSeasoningChange()">
+            <option value="">-- choisis --</option>
+          </select>
+          <input type="number" id="meal-qty-seasoning" min="0" step="0.5">
+          <span class="unit-label" id="meal-unit-seasoning"></span>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+          <button class="btn" onclick="addCurrentMealToList()">Ajouter à ma liste de courses ✨</button>
+          <button class="btn secondary" onclick="eatCurrentMeal()" title="Compte ce repas dans ton total calorique du jour">🍽 J'ai mangé ce repas</button>
+          <button class="btn secondary" onclick="consumeCurrentMealFromStock()" title="Retire directement ces quantités de ton stock, sans passer par les courses">Consommer depuis mon stock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Ravitaillement</div>
+      <h2>Petit-déjeuner</h2>
+      <p class="lede">Une base protéinée (skyr, pancakes protéinés...) + un accompagnement, choisis toi-même. Même logique que pour les repas principaux.</p>
+    </div>
+    <div class="altar">
+      <div class="meal-select-row">
+        <label>Base</label>
+        <select id="breakfast-select-base" onchange="onBreakfastBaseChange()">
+          <option value="">-- choisis --</option>
+        </select>
+        <input type="number" id="breakfast-qty-base" min="0" step="5">
+        <span class="unit-label" id="breakfast-unit-base"></span>
+      </div>
+      <div class="meal-select-row">
+        <label>Accompagnement</label>
+        <select id="breakfast-select-topping" onchange="onBreakfastToppingChange()">
+          <option value="">-- choisis --</option>
+        </select>
+        <input type="number" id="breakfast-qty-topping" min="0" step="5">
+        <span class="unit-label" id="breakfast-unit-topping"></span>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn" onclick="addBreakfastToList()">Ajouter à ma liste de courses ✨</button>
+        <button class="btn secondary" onclick="eatBreakfast()" title="Compte ce petit-déjeuner dans ton total calorique du jour">🍽 J'ai mangé ce petit-déj</button>
+        <button class="btn secondary" onclick="consumeBreakfastFromStock()" title="Retire directement ces quantités de ton stock">Consommer depuis mon stock</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Provisions</div>
+      <h2>Ma liste de courses</h2>
+      <p class="lede">Chaque repas ajouté s'accumule ici avec ses quantités. Supprime ce qui n'est plus utile, télécharge la liste, ou marque les courses comme faites pour les transférer dans ton stock.</p>
+    </div>
+    <div id="grocery-list"></div>
+    <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+      <button class="btn secondary" onclick="downloadGroceryList()">Télécharger la liste de courses ⤓</button>
+      <button class="btn" onclick="markShoppingDoneAndRender()">J'ai fait les courses → ajouter au stock</button>
+      <button class="btn secondary" onclick="clearGroceryAndRender()">Vider la liste</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Garde-manger</div>
+      <h2>État des stocks</h2>
+      <p class="lede">Ce que tu as réellement chez toi, aliment par aliment. Modifie les quantités toi-même à tout moment, ou "consomme" ce que tu manges — une alerte apparaît quand il ne reste presque plus rien.</p>
+    </div>
+    <div id="stock-alert-banner"></div>
+    <div id="stock-list"></div>
+    <div class="stock-add-row">
+      <select id="stock-add-name"></select>
+      <input type="number" id="stock-add-qty" min="0" step="5" placeholder="Quantité">
+      <span class="unit-label" id="stock-add-unit"></span>
+      <button class="btn secondary" onclick="addStockManual()">+ Ajouter au stock</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Suivi du jour</div>
+      <h2>Suppléments : shakers & barres protéinées</h2>
+      <p class="lede">Renseigne ce que t'apporte ton produit (protéines/calories par unité), compte ce que tu as pris aujourd'hui, et vois combien il t'en reste par rapport à ton objectif protéines.</p>
+    </div>
+    <div class="altar">
+      <div id="supplements-panel"></div>
     </div>
   </div>
 
@@ -168,45 +321,487 @@
 <script src="assets/firebase-config.js"></script>
 <script src="assets/app.js"></script>
 <script>
-  let selectedWeek = currentWeekIndex();
+  let currentProtein = null;
+  let dietMode = "normal"; // "normal" | "seche" — choisi par l'utilisateur, jamais automatique
+  let calcObjectifs = null; // rempli par calculerObjectifs(), utilisé pour la quantité de protéine par défaut
 
-  function renderWeekSelect(){
-    const sel = document.getElementById("week-select");
-    sel.innerHTML = WEEKLY_MENUS.map((w, i) =>
-      `<option value="${i}" ${i === selectedWeek ? "selected" : ""}>${w.name}${i === currentWeekIndex() ? " (cette semaine)" : ""}</option>`
-    ).join("");
-    sel.addEventListener("change", e => {
-      selectedWeek = parseInt(e.target.value, 10);
-      renderMenuTable();
-    });
+  function renderProteinGrid(){
+    const grid = document.getElementById("protein-grid");
+    const cats = [...new Set(MEAL_PROTEINS.map(p => p.cat))];
+    grid.innerHTML = cats.map(cat => `
+      <div class="protein-cat-label">${cat}</div>
+      <div class="protein-cat-row">
+        ${MEAL_PROTEINS.filter(p => p.cat === cat).map(p => `<button class="protein-btn" data-key="${p.key}" onclick="chooseProtein('${p.key}')">${p.name}</button>`).join("")}
+      </div>
+    `).join("");
   }
 
-  function renderMenuTable(){
-    const week = WEEKLY_MENUS[selectedWeek];
-    const table = document.getElementById("menu-table");
-    table.innerHTML = `
-      <tr><th>Jour</th><th>Petit-déjeuner</th><th>Déjeuner</th><th>Dîner</th></tr>
-      ${week.days.map(d => `
-        <tr>
-          <td class="day-cell">${d.day}</td>
-          <td>${d.breakfast.name}</td>
-          <td>${d.lunch.name}</td>
-          <td>${d.dinner.name}</td>
-        </tr>
-      `).join("")}
+  function setDietMode(mode){
+    dietMode = mode;
+    document.getElementById("mode-normal").classList.toggle("active", mode === "normal");
+    document.getElementById("mode-seche").classList.toggle("active", mode === "seche");
+    document.getElementById("mode-note").textContent = mode === "seche"
+      ? "Mode Sèche — réduit encore un peu plus les féculents et les matières grasses en plus de ton objectif calorique choisi ci-dessus. Modifie librement les quantités."
+      : "Mode Normal — les quantités suivent uniquement l'objectif calorique choisi ci-dessus.";
+    if(currentProtein) document.getElementById("meal-qty-protein").value = defaultProteinQty(currentProtein);
+    onStarchChange(true);
+    onSeasoningChange(true);
+  }
+
+  function deficitScale(){
+    const deficit = calcObjectifs ? calcObjectifs.deficit : 500;
+    if(deficit >= 750) return 0.55;
+    if(deficit >= 500) return 0.7;
+    if(deficit >= 300) return 0.85;
+    return 1.0; // maintien ou prise de masse
+  }
+
+  function defaultProteinQty(protein){
+    if(protein.unit !== "g") return protein.qty; // ex : œufs comptés à l'unité
+    const target = calcObjectifs && calcObjectifs.proteines ? calcObjectifs.proteines : null;
+    if(!target) return protein.qty;
+    return Math.round(target / 3); // répartition simple sur 3 repas principaux
+  }
+
+  function defaultStarchQty(starch){
+    let scale = deficitScale();
+    if(dietMode === "seche") scale *= 0.85;
+    return Math.max(0, Math.round(starch.qty * scale));
+  }
+
+  function defaultSeasoningQty(seasoning){
+    if(dietMode === "seche" && seasoning.unit === "c. à soupe"){
+      return Math.max(0.5, seasoning.qty * 0.5);
+    }
+    return seasoning.qty;
+  }
+
+  function chooseProtein(key){
+    document.querySelectorAll(".protein-btn").forEach(b => b.classList.toggle("active", b.getAttribute("data-key") === key));
+    currentProtein = MEAL_PROTEINS.find(p => p.key === key);
+    document.getElementById("meal-result").style.display = "block";
+    document.getElementById("meal-protein-name").textContent = currentProtein.name;
+    document.getElementById("meal-qty-protein").value = defaultProteinQty(currentProtein);
+    document.getElementById("meal-unit-protein").textContent = currentProtein.unit;
+
+    const starchSel = document.getElementById("meal-select-starch");
+    starchSel.innerHTML = '<option value="">-- choisis --</option>' + MEAL_STARCHES.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
+    const vegSel = document.getElementById("meal-select-veg");
+    vegSel.innerHTML = '<option value="">-- choisis --</option>' + MEAL_VEGETABLES.map(v => `<option value="${v.name}">${v.name}</option>`).join("");
+    const seasSel = document.getElementById("meal-select-seasoning");
+    seasSel.innerHTML = '<option value="">-- choisis --</option>' + MEAL_SEASONINGS.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
+
+    starchSel.value = ""; vegSel.value = ""; seasSel.value = "";
+    document.getElementById("meal-qty-starch").value = "";
+    document.getElementById("meal-qty-veg").value = "";
+    document.getElementById("meal-qty-seasoning").value = "";
+    document.getElementById("meal-unit-starch").textContent = "";
+    document.getElementById("meal-unit-veg").textContent = "";
+    document.getElementById("meal-unit-seasoning").textContent = "";
+  }
+
+  function onStarchChange(keepIfEmpty){
+    const name = document.getElementById("meal-select-starch").value;
+    const starch = MEAL_STARCHES.find(s => s.name === name);
+    if(!starch){ if(!keepIfEmpty) document.getElementById("meal-qty-starch").value = ""; return; }
+    document.getElementById("meal-qty-starch").value = defaultStarchQty(starch);
+    document.getElementById("meal-unit-starch").textContent = starch.unit;
+  }
+
+  function onVegChange(){
+    const name = document.getElementById("meal-select-veg").value;
+    const veg = MEAL_VEGETABLES.find(v => v.name === name);
+    if(!veg) return;
+    document.getElementById("meal-qty-veg").value = veg.qty;
+    document.getElementById("meal-unit-veg").textContent = veg.unit;
+  }
+
+  function onSeasoningChange(keepIfEmpty){
+    const name = document.getElementById("meal-select-seasoning").value;
+    const seasoning = MEAL_SEASONINGS.find(s => s.name === name);
+    if(!seasoning){ if(!keepIfEmpty) document.getElementById("meal-qty-seasoning").value = ""; return; }
+    document.getElementById("meal-qty-seasoning").value = defaultSeasoningQty(seasoning);
+    document.getElementById("meal-unit-seasoning").textContent = seasoning.unit;
+  }
+
+  function getComposedMealParts(){
+    if(!currentProtein) return null;
+    const starchName = document.getElementById("meal-select-starch").value;
+    const vegName = document.getElementById("meal-select-veg").value;
+    const seasoningName = document.getElementById("meal-select-seasoning").value;
+    if(!starchName || !vegName || !seasoningName) return null;
+    const starch = MEAL_STARCHES.find(s => s.name === starchName);
+    const vegetable = MEAL_VEGETABLES.find(v => v.name === vegName);
+    const seasoning = MEAL_SEASONINGS.find(s => s.name === seasoningName);
+    return {
+      protein: { name: currentProtein.name, qty: parseFloat(document.getElementById("meal-qty-protein").value) || currentProtein.qty },
+      starch: { name: starch.name, qty: parseFloat(document.getElementById("meal-qty-starch").value) || starch.qty },
+      vegetable: { name: vegetable.name, qty: parseFloat(document.getElementById("meal-qty-veg").value) || vegetable.qty },
+      seasoning: { name: seasoning.name, qty: parseFloat(document.getElementById("meal-qty-seasoning").value) || seasoning.qty },
+    };
+  }
+
+  function addCurrentMealToList(){
+    if(!currentProtein){ showSimpleToast("Choisis d'abord une protéine."); return; }
+    const starchName = document.getElementById("meal-select-starch").value;
+    const vegName = document.getElementById("meal-select-veg").value;
+    const seasoningName = document.getElementById("meal-select-seasoning").value;
+    if(!starchName || !vegName || !seasoningName){
+      showSimpleToast("Choisis un féculent, un légume ET un assaisonnement avant d'ajouter.");
+      return;
+    }
+    const starch = MEAL_STARCHES.find(s => s.name === starchName);
+    const vegetable = MEAL_VEGETABLES.find(v => v.name === vegName);
+    const seasoning = MEAL_SEASONINGS.find(s => s.name === seasoningName);
+
+    const proteinQty = parseFloat(document.getElementById("meal-qty-protein").value) || currentProtein.qty;
+    const starchQty = parseFloat(document.getElementById("meal-qty-starch").value) || starch.qty;
+    const vegQty = parseFloat(document.getElementById("meal-qty-veg").value) || vegetable.qty;
+    const seasoningQty = parseFloat(document.getElementById("meal-qty-seasoning").value) || seasoning.qty;
+
+    addGroceryItem({ name: currentProtein.name, qty: proteinQty, unit: currentProtein.unit, cat: "Protéines" });
+    addGroceryItem({ name: starch.name,         qty: starchQty,  unit: starch.unit,         cat: "Féculents" });
+    addGroceryItem({ name: vegetable.name,      qty: vegQty,     unit: vegetable.unit,      cat: "Fruits & légumes" });
+    addGroceryItem({ name: seasoning.name,      qty: seasoningQty, unit: seasoning.unit,    cat: seasoning.cat || "Épicerie" });
+    saveState();
+
+    renderGroceryList();
+    showSimpleToast("Repas ajouté à la liste de courses");
+  }
+
+  function getComposedMealPartsFull(){
+    const starchName = document.getElementById("meal-select-starch").value;
+    const vegName = document.getElementById("meal-select-veg").value;
+    const seasoningName = document.getElementById("meal-select-seasoning").value;
+    if(!currentProtein || !starchName || !vegName || !seasoningName) return null;
+    const starch = MEAL_STARCHES.find(s => s.name === starchName);
+    const vegetable = MEAL_VEGETABLES.find(v => v.name === vegName);
+    const seasoning = MEAL_SEASONINGS.find(s => s.name === seasoningName);
+    return {
+      protein: { name: currentProtein.name, qty: parseFloat(document.getElementById("meal-qty-protein").value) || currentProtein.qty },
+      starch: { name: starch.name, qty: parseFloat(document.getElementById("meal-qty-starch").value) || starch.qty },
+      vegetable: { name: vegetable.name, qty: parseFloat(document.getElementById("meal-qty-veg").value) || vegetable.qty },
+      seasoning: { name: seasoning.name, qty: parseFloat(document.getElementById("meal-qty-seasoning").value) || seasoning.qty },
+    };
+  }
+
+  function consumeCurrentMealFromStock(){
+    const parts = getComposedMealPartsFull();
+    if(!parts){
+      showSimpleToast("Choisis une protéine, un féculent, un légume ET un assaisonnement d'abord.");
+      return;
+    }
+    [parts.protein, parts.starch, parts.vegetable, parts.seasoning].forEach(p => consumeStockQty(p.name, p.qty));
+    renderStock();
+    showSimpleToast("Repas retiré de ton stock");
+  }
+
+  function eatCurrentMeal(){
+    const parts = getComposedMealPartsFull();
+    if(!parts){
+      showSimpleToast("Choisis une protéine, un féculent, un légume ET un assaisonnement d'abord.");
+      return;
+    }
+    const items = [parts.protein, parts.starch, parts.vegetable, parts.seasoning];
+    const kcal = logMealCalories(`Repas — ${parts.protein.name}`, items);
+    renderDailyLog();
+    showSimpleToast(`Repas compté : +${kcal} kcal aujourd'hui`);
+  }
+
+  /* ---------- Petit-déjeuner ---------- */
+  function initBreakfastSelects(){
+    const baseSel = document.getElementById("breakfast-select-base");
+    baseSel.innerHTML = '<option value="">-- choisis --</option>' + BREAKFAST_BASES.map(b => `<option value="${b.name}">${b.name}</option>`).join("");
+    const topSel = document.getElementById("breakfast-select-topping");
+    topSel.innerHTML = '<option value="">-- choisis --</option>' + BREAKFAST_TOPPINGS.map(t => `<option value="${t.name}">${t.name}</option>`).join("");
+  }
+
+  function onBreakfastBaseChange(){
+    const name = document.getElementById("breakfast-select-base").value;
+    const base = BREAKFAST_BASES.find(b => b.name === name);
+    if(!base) return;
+    document.getElementById("breakfast-qty-base").value = base.qty;
+    document.getElementById("breakfast-unit-base").textContent = base.unit;
+  }
+
+  function onBreakfastToppingChange(){
+    const name = document.getElementById("breakfast-select-topping").value;
+    const topping = BREAKFAST_TOPPINGS.find(t => t.name === name);
+    if(!topping) return;
+    document.getElementById("breakfast-qty-topping").value = topping.qty;
+    document.getElementById("breakfast-unit-topping").textContent = topping.unit;
+  }
+
+  function getComposedBreakfastParts(){
+    const baseName = document.getElementById("breakfast-select-base").value;
+    const topName = document.getElementById("breakfast-select-topping").value;
+    if(!baseName || !topName) return null;
+    const base = BREAKFAST_BASES.find(b => b.name === baseName);
+    const topping = BREAKFAST_TOPPINGS.find(t => t.name === topName);
+    return {
+      base: { name: base.name, qty: parseFloat(document.getElementById("breakfast-qty-base").value) || base.qty, unit: base.unit, cat: base.cat },
+      topping: { name: topping.name, qty: parseFloat(document.getElementById("breakfast-qty-topping").value) || topping.qty, unit: topping.unit, cat: topping.cat },
+    };
+  }
+
+  function addBreakfastToList(){
+    const parts = getComposedBreakfastParts();
+    if(!parts){ showSimpleToast("Choisis une base ET un accompagnement."); return; }
+    addGroceryItem({ name: parts.base.name, qty: parts.base.qty, unit: parts.base.unit, cat: parts.base.cat });
+    addGroceryItem({ name: parts.topping.name, qty: parts.topping.qty, unit: parts.topping.unit, cat: parts.topping.cat });
+    saveState();
+    renderGroceryList();
+    showSimpleToast("Petit-déjeuner ajouté à la liste de courses");
+  }
+
+  function consumeBreakfastFromStock(){
+    const parts = getComposedBreakfastParts();
+    if(!parts){ showSimpleToast("Choisis une base ET un accompagnement d'abord."); return; }
+    consumeStockQty(parts.base.name, parts.base.qty);
+    consumeStockQty(parts.topping.name, parts.topping.qty);
+    renderStock();
+    showSimpleToast("Petit-déjeuner retiré de ton stock");
+  }
+
+  function eatBreakfast(){
+    const parts = getComposedBreakfastParts();
+    if(!parts){ showSimpleToast("Choisis une base ET un accompagnement d'abord."); return; }
+    const kcal = logMealCalories(`Petit-déjeuner — ${parts.base.name}`, [parts.base, parts.topping]);
+    renderDailyLog();
+    showSimpleToast(`Petit-déj compté : +${kcal} kcal aujourd'hui`);
+  }
+
+  function renderGroceryList(){
+    const el = document.getElementById("grocery-list");
+    const list = state.groceryList || [];
+    if(list.length === 0){
+      el.innerHTML = '<div class="empty-note">Ta liste est vide pour l\'instant — compose un repas ci-dessus et ajoute-le.</div>';
+      return;
+    }
+    const byCat = {};
+    list.forEach((it, i) => { if(!byCat[it.cat]) byCat[it.cat] = []; byCat[it.cat].push({...it, idx:i}); });
+    el.innerHTML = GROCERY_CAT_ORDER.filter(c => byCat[c]).map(cat => `
+      <div class="grocery-cat">
+        <div class="grocery-cat-label">${cat}</div>
+        ${byCat[cat].map(it => `
+          <div class="grocery-item">
+            <span>${it.name}</span>
+            <span class="grocery-qty">${Number.isInteger(it.qty) ? it.qty : it.qty.toFixed(1)} ${it.unit}</span>
+            <button class="grocery-remove" title="Supprimer" onclick="removeGroceryItemAndRender(${it.idx})">✕</button>
+          </div>
+        `).join("")}
+      </div>
+    `).join("");
+  }
+
+  function removeGroceryItemAndRender(idx){
+    removeGroceryItem(idx);
+    renderGroceryList();
+  }
+
+  function clearGroceryAndRender(){
+    clearGroceryList();
+    renderGroceryList();
+    showSimpleToast("Liste de courses vidée");
+  }
+
+  function markShoppingDoneAndRender(){
+    if((state.groceryList || []).length === 0){ showSimpleToast("Ta liste de courses est vide."); return; }
+    markShoppingDone();
+    renderGroceryList();
+    renderStock();
+    showSimpleToast("Stock mis à jour ✨");
+  }
+
+  const STOCK_LEVEL_LABEL = { epuise: "Épuisé", bas: "Stock bas", ok: "OK" };
+
+  function renderStock(){
+    const rows = stockRows();
+    const banner = document.getElementById("stock-alert-banner");
+    const alerts = rows.filter(r => r.level === "bas" || r.level === "epuise");
+    banner.innerHTML = alerts.length
+      ? `<div class="stock-alert-banner">⚠ <b>${alerts.length} aliment${alerts.length>1?"s":""}</b> bientôt épuisé${alerts.length>1?"s":""} : ${alerts.map(a => `${a.name} (${Number.isInteger(a.qty)?a.qty:a.qty.toFixed(1)} ${a.unit})`).join(", ")}</div>`
+      : "";
+
+    const list = document.getElementById("stock-list");
+    if(rows.length === 0){
+      list.innerHTML = '<div class="empty-note">Aucun stock renseigné pour l\'instant. Ajoute un aliment ci-dessous, ou fais tes courses puis clique "J\'ai fait les courses".</div>';
+      return;
+    }
+    list.innerHTML = rows.map(r => `
+      <div class="stock-row stock-${r.level}">
+        <span class="stock-name">${r.name}</span>
+        <span class="stock-badge">${STOCK_LEVEL_LABEL[r.level]}</span>
+        <input type="number" min="0" step="5" value="${r.qty}" title="Quantité en stock" onchange="updateStockQty('${r.name.replace(/'/g,"\\'")}', this.value)">
+        <span class="unit-label">${r.unit}</span>
+        <input type="number" min="0" step="5" class="stock-consume-input" placeholder="Consommer" title="Quantité à retirer (ex : ce que tu viens de manger)">
+        <button class="btn secondary stock-consume-btn" title="Retirer cette quantité du stock" onclick="consumeStockAndRender('${r.name.replace(/'/g,"\\'")}', this)">− Consommer</button>
+        <button class="grocery-remove" title="Retirer du stock" onclick="removeStockItemAndRender('${r.name.replace(/'/g,"\\'")}')">✕</button>
+      </div>
+    `).join("");
+  }
+
+  function consumeStockAndRender(name, btn){
+    const row = btn.closest ? btn.closest(".stock-row") : btn.parentElement;
+    const input = row ? row.querySelector(".stock-consume-input") : null;
+    const qty = input ? (parseFloat(input.value) || 0) : 0;
+    if(qty <= 0){ showSimpleToast("Indique une quantité à retirer."); return; }
+    consumeStockQty(name, qty);
+    renderStock();
+    showSimpleToast(`${name} : -${qty} retiré du stock`);
+  }
+
+  function updateStockQty(name, value){
+    const qty = parseFloat(value) || 0;
+    setStockQty(name, qty);
+    renderStock();
+  }
+
+  function removeStockItemAndRender(name){
+    removeStockItem(name);
+    renderStock();
+  }
+
+  function addStockManual(){
+    const name = document.getElementById("stock-add-name").value;
+    const qty = parseFloat(document.getElementById("stock-add-qty").value) || 0;
+    if(!name || qty <= 0){ showSimpleToast("Choisis un aliment et une quantité."); return; }
+    const ref = FOOD_REFERENCE[name];
+    addToStockQty(name, qty, ref ? ref.unit : "", ref ? ref.cat : "Épicerie");
+    saveState();
+    document.getElementById("stock-add-qty").value = "";
+    renderStock();
+  }
+
+  function renderStockAddOptions(){
+    const sel = document.getElementById("stock-add-name");
+    sel.innerHTML = allFoodNames().map(n => `<option value="${n}">${n}</option>`).join("");
+    sel.addEventListener("change", () => {
+      const ref = FOOD_REFERENCE[sel.value];
+      document.getElementById("stock-add-unit").textContent = ref ? ref.unit : "";
+    });
+    if(sel.value){
+      const ref = FOOD_REFERENCE[sel.value];
+      document.getElementById("stock-add-unit").textContent = ref ? ref.unit : "";
+    }
+  }
+
+  /* ---------- Journal calorique du jour ---------- */
+  function renderDailyLog(){
+    const el = document.getElementById("daily-log-panel");
+    const { entries, kcalTotal } = dailyLogTotals();
+    const suppKcal = supplementsTotals().caloriesTotal;
+    const grandTotal = kcalTotal + suppKcal;
+    const target = calcObjectifs ? Math.round(calcObjectifs.objectifCalorique) : null;
+
+    let listHtml;
+    if(entries.length === 0){
+      listHtml = '<div class="empty-note">Aucun repas compté aujourd\'hui pour l\'instant.</div>';
+    } else {
+      listHtml = entries.map((e, i) => `
+        <div class="grocery-item">
+          <span>${e.time} — ${e.label}</span>
+          <span class="grocery-qty">${e.kcal} kcal</span>
+          <button class="grocery-remove" title="Retirer cette entrée" onclick="removeDailyLogEntryAndRender(${i})">✕</button>
+        </div>
+      `).join("");
+    }
+
+    let summaryHtml;
+    if(target !== null){
+      const remaining = target - grandTotal;
+      summaryHtml = remaining >= 0
+        ? `<div class="macro-row"><span>Il te reste</span><b class="supp-remaining-ok">${remaining} kcal</b> <span style="color:var(--parchment-dim);">sur ${target} kcal</span></div>`
+        : `<div class="macro-row"><span>Dépassement</span><b class="supp-remaining-over">+${Math.abs(remaining)} kcal</b> <span style="color:var(--parchment-dim);">au-dessus de ton objectif (${target} kcal)</span></div>`;
+    } else {
+      summaryHtml = `<div class="empty-note">Renseigne poids/taille/âge dans le calculateur plus haut pour voir ton objectif.</div>`;
+    }
+
+    el.innerHTML = `
+      ${listHtml}
+      <div class="supp-summary">
+        <div class="macro-row"><span>Repas + petit-déj</span><b>${kcalTotal} kcal</b></div>
+        <div class="macro-row"><span>Shakers + barres</span><b>${suppKcal} kcal</b></div>
+        <div class="macro-row"><span>Total aujourd'hui</span><b>${grandTotal} kcal</b></div>
+        ${summaryHtml}
+      </div>
     `;
   }
 
-  function downloadShoppingList(){
-    const text = generateShoppingListText(selectedWeek);
-    const filename = "courses-" + WEEKLY_MENUS[selectedWeek].name.toLowerCase().replace(/\s+/g, "-") + ".txt";
-    downloadTextFile(filename, text);
+  function removeDailyLogEntryAndRender(index){
+    removeDailyLogEntry(index);
+    renderDailyLog();
   }
 
-  function downloadRecipes(){
-    const text = generateRecipesText(selectedWeek);
-    const filename = "recettes-" + WEEKLY_MENUS[selectedWeek].name.toLowerCase().replace(/\s+/g, "-") + ".txt";
-    downloadTextFile(filename, text);
+  /* ---------- Suppléments du jour (shakers / barres) ---------- */
+  function renderSupplements(){
+    const t = supplementsTotals();
+    const el = document.getElementById("supplements-panel");
+    const target = calcObjectifs ? calcObjectifs.proteines : null;
+    const remaining = target !== null ? target - t.proteinTotal : null;
+
+    let remainingHtml = "";
+    if(target !== null){
+      if(remaining >= 0){
+        const shakesLeft = t.shakeProtein > 0 ? Math.floor(remaining / t.shakeProtein) : 0;
+        const barsLeft = t.barProtein > 0 ? Math.floor(remaining / t.barProtein) : 0;
+        remainingHtml = `<div class="macro-row"><span>Il te reste</span><b class="supp-remaining-ok">${remaining} g de protéines</b></div>
+          <div class="macro-row"><span>Soit encore, au choix</span><b>~${shakesLeft} shaker(s) OU ~${barsLeft} barre(s)</b></div>`;
+      } else {
+        remainingHtml = `<div class="macro-row"><span>Dépassement</span><b class="supp-remaining-over">+${Math.abs(remaining)} g au-dessus de ton objectif protéines</b></div>`;
+      }
+    } else {
+      remainingHtml = `<div class="empty-note">Renseigne poids/taille/âge dans le calculateur plus haut pour voir ce qu'il te reste.</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="supp-card">
+        <h4>🥤 Shaker protéiné</h4>
+        <div class="supp-config-row">
+          <div class="field"><label>Protéines / shaker</label><input type="number" min="0" step="1" value="${t.shakeProtein}" onchange="updateSupplementUnit('shake','Protein', this.value)"></div>
+          <div class="field"><label>Calories / shaker</label><input type="number" min="0" step="5" value="${t.shakeCalories}" onchange="updateSupplementUnit('shake','Calories', this.value)"></div>
+        </div>
+        <div class="supp-counter">
+          <button class="supp-counter-btn" onclick="changeSupplementCount('shake', -1)">−</button>
+          <span class="supp-count">${t.shakeCount}</span>
+          <button class="supp-counter-btn" onclick="changeSupplementCount('shake', 1)">+</button>
+          <span class="unit-label">pris aujourd'hui</span>
+        </div>
+      </div>
+
+      <div class="supp-card">
+        <h4>🍫 Barre protéinée</h4>
+        <div class="supp-config-row">
+          <div class="field"><label>Protéines / barre</label><input type="number" min="0" step="1" value="${t.barProtein}" onchange="updateSupplementUnit('bar','Protein', this.value)"></div>
+          <div class="field"><label>Calories / barre</label><input type="number" min="0" step="5" value="${t.barCalories}" onchange="updateSupplementUnit('bar','Calories', this.value)"></div>
+        </div>
+        <div class="supp-counter">
+          <button class="supp-counter-btn" onclick="changeSupplementCount('bar', -1)">−</button>
+          <span class="supp-count">${t.barCount}</span>
+          <button class="supp-counter-btn" onclick="changeSupplementCount('bar', 1)">+</button>
+          <span class="unit-label">prise(s) aujourd'hui</span>
+        </div>
+      </div>
+
+      <div class="supp-summary">
+        <div class="macro-row"><span>Total suppléments aujourd'hui</span><b>${t.proteinTotal} g de protéines · ${t.caloriesTotal} kcal</b></div>
+        <div class="macro-row"><span>Ton objectif protéines</span><b>${target !== null ? target + " g / jour" : "non calculé"}</b></div>
+        ${remainingHtml}
+      </div>
+    `;
+  }
+
+  function changeSupplementCount(type, delta){
+    adjustSupplementCount(type, delta);
+    renderSupplements();
+    if(document.getElementById("daily-log-panel")) renderDailyLog();
+  }
+
+  function updateSupplementUnit(type, field, value){
+    const v = parseFloat(value) || 0;
+    setSupplementUnitValue(type, field, v);
+    renderSupplements();
+    if(document.getElementById("daily-log-panel")) renderDailyLog();
   }
 
   function renderSnacks(){
@@ -218,11 +813,74 @@
     `).join("");
   }
 
+  function loadSavedProfile(){
+    const p = state.profile;
+    if(!p) return;
+    if(p.poids) document.getElementById("calc-poids").value = p.poids;
+    if(p.taille) document.getElementById("calc-taille").value = p.taille;
+    if(p.age) document.getElementById("calc-age").value = p.age;
+    if(p.activite) document.getElementById("calc-activite").value = p.activite;
+    if(p.deficit !== undefined && p.deficit !== null) document.getElementById("calc-deficit").value = p.deficit;
+    if(p.sexe) document.getElementById("calc-sexe").value = p.sexe;
+    const wg = state.weightGoal;
+    if(wg && wg.poidsAPerdre) document.getElementById("goal-poids-a-perdre").value = wg.poidsAPerdre;
+  }
+
+  function renderWeightGoal(){
+    const el = document.getElementById("weight-goal-results");
+    const poidsAPerdre = parseFloat(document.getElementById("goal-poids-a-perdre").value) || 0;
+    saveWeightGoal(poidsAPerdre || null);
+
+    if(!poidsAPerdre || poidsAPerdre <= 0){
+      el.innerHTML = '<div class="empty-note">Renseigne le nombre de kilos que tu veux perdre pour voir une estimation.</div>';
+      return;
+    }
+    if(!calcObjectifs){
+      el.innerHTML = '<div class="empty-note">Renseigne poids/taille/âge dans le calculateur ci-dessus pour voir une estimation.</div>';
+      return;
+    }
+
+    const poidsActuel = parseFloat(document.getElementById("calc-poids").value) || 0;
+    const poidsVise = Math.max(0, poidsActuel - poidsAPerdre);
+    const deficit = calcObjectifs.deficit;
+
+    let dureeHtml;
+    if(deficit > 0){
+      const semaines = Math.ceil((poidsAPerdre * 7700) / (deficit * 7));
+      const mois = (semaines / 4.345).toFixed(1);
+      dureeHtml = `<div class="macro-row"><span>Durée estimée</span><b>${semaines} semaine${semaines>1?"s":""} (~${mois} mois)</b></div>`;
+    } else {
+      dureeHtml = `<div class="empty-note">Choisis un objectif "Perte de poids" ou "Sèche" dans le calculateur ci-dessus pour estimer une durée — en Maintien ou Prise de masse, tu ne perds pas de poids.</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="nutri-card">
+        <h3>Ton objectif</h3>
+        <div class="macro-row"><span>Poids actuel</span><b>${poidsActuel} kg</b></div>
+        <div class="macro-row"><span>Poids visé</span><b>${poidsVise} kg</b></div>
+        <div class="macro-row"><span>À perdre</span><b>${poidsAPerdre} kg</b></div>
+        ${dureeHtml}
+      </div>
+      <div class="nutri-card">
+        <h3>Comment lire cette estimation</h3>
+        <p>Basée sur l'équivalence approximative <b>~7700 kcal = 1 kg de graisse</b>, avec le déficit calorique choisi dans le calculateur ci-dessus. C'est une estimation, pas une science exacte — le poids réel varie aussi selon l'eau et la digestion au jour le jour.</p>
+      </div>
+    `;
+  }
+
+  function resetWeightGoalAndRender(){
+    document.getElementById("goal-poids-a-perdre").value = "";
+    resetWeightGoal();
+    renderWeightGoal();
+  }
+
   function calculerObjectifs(){
     const poids = parseFloat(document.getElementById("calc-poids").value) || 0;
     const taille = parseFloat(document.getElementById("calc-taille").value) || 0;
     const age = parseFloat(document.getElementById("calc-age").value) || 0;
     const activite = parseFloat(document.getElementById("calc-activite").value) || 1.4;
+    const deficit = parseFloat(document.getElementById("calc-deficit").value);
+    const sexe = document.getElementById("calc-sexe").value;
     const el = document.getElementById("calc-results");
 
     if(poids <= 0 || taille <= 0 || age <= 0){
@@ -230,21 +888,37 @@
       return;
     }
 
-    // Formule de Mifflin-St Jeor (femme)
-    const bmr = 10*poids + 6.25*taille - 5*age - 161;
+    // Formule de Mifflin-St Jeor, correcte selon le sexe (+5 homme, -161 femme).
+    const bmr = sexe === "homme"
+      ? 10*poids + 6.25*taille - 5*age + 5
+      : 10*poids + 6.25*taille - 5*age - 161;
     const tdee = bmr * activite;
-    const deficitBas = tdee - 300;
-    const deficitHaut = tdee - 500;
-    const proteines = Math.round(poids * 2);
+    const objectifCalorique = tdee - deficit;
+
+    // Plus le déficit est marqué, plus on monte les protéines pour protéger le muscle.
+    const proteinMult = deficit >= 750 ? 2.2 : deficit >= 500 ? 2.0 : deficit >= 300 ? 1.85 : deficit <= 0 ? 1.6 : 1.9;
+    const proteines = Math.round(poids * proteinMult);
     const lipidesBas = Math.round(poids * 0.8);
     const lipidesHaut = Math.round(poids * 1);
     const eauL = (poids * 0.035).toFixed(1);
 
+    const deficitLabel = deficit < 0 ? "Prise de masse légère" : deficit === 0 ? "Maintien" : deficit <= 300 ? "Perte de poids légère" : deficit <= 500 ? "Perte de poids modérée" : "Sèche agressive";
+
+    calcObjectifs = { tdee, objectifCalorique, proteines, lipidesBas, lipidesHaut, eauL, deficit };
+    saveProfile(poids, taille, age, activite, deficit, sexe);
+    if(document.getElementById("weight-goal-results")) renderWeightGoal();
+    if(currentProtein && document.getElementById("meal-qty-protein")){
+      document.getElementById("meal-qty-protein").value = defaultProteinQty(currentProtein);
+    }
+    onStarchChange(true);
+    if(document.getElementById("supplements-panel")) renderSupplements();
+    if(document.getElementById("daily-log-panel")) renderDailyLog();
+
     el.innerHTML = `
       <div class="nutri-card">
-        <h3>Ton estimation</h3>
+        <h3>Ton estimation — ${deficitLabel}</h3>
         <div class="macro-row"><span>Dépense estimée (maintien)</span><b>${Math.round(tdee)} kcal</b></div>
-        <div class="macro-row"><span>Objectif calorique</span><b>${Math.round(deficitHaut)} à ${Math.round(deficitBas)} kcal</b></div>
+        <div class="macro-row"><span>Objectif calorique</span><b>${Math.round(objectifCalorique)} kcal</b></div>
         <div class="macro-row"><span>Protéines cibles</span><b>${proteines} g / jour</b></div>
         <div class="macro-row"><span>Lipides cibles</span><b>${lipidesBas} à ${lipidesHaut} g / jour</b></div>
         <div class="macro-row"><span>Eau conseillée</span><b>${eauL} L / jour</b></div>
@@ -252,20 +926,33 @@
       <div class="nutri-card">
         <h3>Comment lire ces chiffres</h3>
         <p>Ce sont des <b>estimations</b> basées sur la formule de Mifflin-St Jeor, pas une mesure exacte — le métabolisme réel varie d'une personne à l'autre.</p>
-        <p style="margin-top:8px;">Pèse-toi 1 à 2 fois par semaine, à jeun, toujours dans les mêmes conditions. Si le poids ne bouge pas après 2-3 semaines à l'objectif bas, retire encore 100-150 kcal.</p>
+        <p style="margin-top:8px;">Pèse-toi 1 à 2 fois par semaine, à jeun, toujours dans les mêmes conditions. Si le poids ne bouge pas après 2-3 semaines, ajuste le niveau d'objectif ci-dessus.</p>
+        <p style="margin-top:8px;">Les quantités par défaut dans "Compose ton repas" et le suivi des suppléments se basent sur ces chiffres — tu peux toujours les modifier toi-même.</p>
       </div>
     `;
   }
 
+  function safeRun(fn, label){
+    try{ fn(); }catch(e){ console.error(`Erreur dans ${label} :`, e); }
+  }
+
   (async () => {
     await initPage("nutrition");
-    renderWeekSelect();
-    renderMenuTable();
-    renderSnacks();
-    calculerObjectifs();
-    ["calc-poids","calc-taille","calc-age","calc-activite"].forEach(id => {
-      document.getElementById(id).addEventListener("input", calculerObjectifs);
-      document.getElementById(id).addEventListener("change", calculerObjectifs);
+    safeRun(loadSavedProfile, "loadSavedProfile");
+    safeRun(renderProteinGrid, "renderProteinGrid");
+    safeRun(initBreakfastSelects, "initBreakfastSelects");
+    safeRun(renderGroceryList, "renderGroceryList");
+    safeRun(renderStock, "renderStock");
+    safeRun(renderStockAddOptions, "renderStockAddOptions");
+    safeRun(renderDailyLog, "renderDailyLog");
+    safeRun(renderSupplements, "renderSupplements");
+    safeRun(renderSnacks, "renderSnacks");
+    safeRun(calculerObjectifs, "calculerObjectifs");
+    safeRun(renderWeightGoal, "renderWeightGoal");
+    document.getElementById("goal-poids-a-perdre").addEventListener("input", () => safeRun(renderWeightGoal, "renderWeightGoal"));
+    ["calc-poids","calc-taille","calc-age","calc-activite","calc-deficit","calc-sexe"].forEach(id => {
+      document.getElementById(id).addEventListener("input", () => safeRun(calculerObjectifs, "calculerObjectifs"));
+      document.getElementById(id).addEventListener("change", () => safeRun(calculerObjectifs, "calculerObjectifs"));
     });
   })();
 

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Séance libre — Académie Étoile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1224">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Étoile">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<div class="wrap">
+  <div id="minibar-container"></div>
+
+  <div class="section" style="border-top:1px solid var(--iron); padding-top:34px;">
+    <div class="section-head">
+      <div class="rune-mark">Quête · Improvisation</div>
+      <h2>Séance libre</h2>
+      <p class="lede">Tu as fait autre chose que le programme du jour ? Renseigne les exercices que tu as réellement effectués (les machines connues sont reconnues automatiquement), et l'académie évalue ta séance : zones travaillées, XP, records.</p>
+    </div>
+
+    <datalist id="all-exo-names"></datalist>
+
+    <div id="custom-rows"></div>
+
+    <button class="btn secondary" onclick="addCustomRow()" style="margin-top:4px;">+ Ajouter un exercice</button>
+
+    <div class="altar" style="margin-top:20px;">
+      <div class="form-row">
+        <label for="effort">Intensité ressentie</label>
+        <div class="range-row">
+          <input type="range" id="effort" min="1" max="3" value="2" step="1">
+          <span class="range-val" id="effort-label">Modérée</span>
+        </div>
+      </div>
+      <button class="btn" onclick="evaluateAndShow()">Évaluer cette séance ✨</button>
+    </div>
+
+    <div class="altar" id="custom-result" style="margin-top:20px; display:none;"></div>
+  </div>
+</div>
+
+<footer>Académie Étoile · tes données restent stockées sur cet appareil (stockage persistant du navigateur)</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  let customRowCount = 0;
+
+  function addCustomRow(){
+    const container = document.getElementById("custom-rows");
+    const i = customRowCount++;
+    const div = document.createElement("div");
+    div.className = "custom-row";
+    div.setAttribute("data-idx", i);
+    div.innerHTML = `
+      <input list="all-exo-names" class="custom-name" placeholder="Nom de l'exercice (ex : Chest Press, Course à pied...)">
+      <input type="number" class="custom-weight" placeholder="Poids (kg)" min="0" step="0.5">
+      <input type="number" class="custom-reps" placeholder="Reps" min="0" step="1">
+      <input type="number" class="custom-sets" placeholder="Séries" min="0" step="1">
+      <button class="custom-remove" title="Supprimer cet exercice" onclick="this.parentElement.remove()">✕</button>
+    `;
+    container.appendChild(div);
+  }
+
+  function collectCustomRows(){
+    return Array.from(document.querySelectorAll("#custom-rows .custom-row")).map(row => ({
+      name: row.querySelector(".custom-name").value,
+      weight: parseFloat(row.querySelector(".custom-weight").value) || null,
+      reps: parseInt(row.querySelector(".custom-reps").value, 10) || null,
+      sets: parseInt(row.querySelector(".custom-sets").value, 10) || null,
+    }));
+  }
+
+  const EFFORT_LABELS = {1:"Légère", 2:"Modérée", 3:"Intense"};
+  document.getElementById("effort").addEventListener("input", e => {
+    document.getElementById("effort-label").textContent = EFFORT_LABELS[e.target.value];
+  });
+
+  function evaluateAndShow(){
+    const rows = collectCustomRows();
+    const valid = rows.filter(r => r.name && r.name.trim());
+    if(valid.length === 0){
+      showSimpleToast("Renseigne au moins un exercice avant d'évaluer la séance.");
+      return;
+    }
+    const effort = parseInt(document.getElementById("effort").value, 10);
+    const result = evaluateCustomSession(rows, effort);
+    document.getElementById("minibar-container").innerHTML = renderMiniBar();
+    document.getElementById("custom-result").style.display = "block";
+    renderCustomResultSummary("custom-result", result);
+    if(result.leveledUp){
+      showLevelUpToast();
+    } else {
+      showSimpleToast(`+${result.xpGain} XP · séance libre gravée`);
+    }
+  }
+
+  (async () => {
+    await initPage("custom");
+    document.getElementById("all-exo-names").innerHTML = allExerciseNames().map(n => `<option value="${n}"></option>`).join("");
+    for(let k = 0; k < 3; k++) addCustomRow();
+  })();
+</script>
+<script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker non enregistré :", err));
+    });
+  }
+</script>
+</body>
+</html>
