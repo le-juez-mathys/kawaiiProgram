@@ -82,10 +82,11 @@
     const result = logCategorySession(currentVariant, entries, effort);
     buildExerciseInputs("exo-container", currentVariant);
     document.getElementById("minibar-container").innerHTML = renderMiniBar();
+    const kcalNote = result.burnedKcal > 0 ? ` · ~${result.burnedKcal} kcal brûlées` : "";
     if(result.leveledUp){
       showLevelUpToast();
     } else {
-      showSimpleToast(`+${result.xpGain} XP · ${result.doneCount}/${result.total} exercices${result.prCount ? " · "+result.prCount+" record(s) !" : ""}`);
+      showSimpleToast(`+${result.xpGain} XP · ${result.doneCount}/${result.total} exercices${result.prCount ? " · "+result.prCount+" record(s) !" : ""}${kcalNote}`);
     }
   }
 

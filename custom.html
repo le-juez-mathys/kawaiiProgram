@@ -39,6 +39,10 @@
 
     <div class="altar" style="margin-top:20px;">
       <div class="form-row">
+        <label for="session-duration">Durée de la séance (min)</label>
+        <input type="number" id="session-duration" min="0" step="5" placeholder="ex: 45" style="max-width:140px;">
+      </div>
+      <div class="form-row">
         <label for="effort">Intensité ressentie</label>
         <div class="range-row">
           <input type="range" id="effort" min="1" max="3" value="2" step="1">
@@ -100,14 +104,16 @@
       return;
     }
     const effort = parseInt(document.getElementById("effort").value, 10);
-    const result = evaluateCustomSession(rows, effort);
+    const duration = parseFloat(document.getElementById("session-duration").value) || null;
+    const result = evaluateCustomSession(rows, effort, duration);
     document.getElementById("minibar-container").innerHTML = renderMiniBar();
     document.getElementById("custom-result").style.display = "block";
     renderCustomResultSummary("custom-result", result);
+    const kcalNote = result.burnedKcal > 0 ? ` · ~${result.burnedKcal} kcal brûlées` : "";
     if(result.leveledUp){
       showLevelUpToast();
     } else {
-      showSimpleToast(`+${result.xpGain} XP · séance libre gravée`);
+      showSimpleToast(`+${result.xpGain} XP · séance libre gravée${kcalNote}`);
     }
   }
 

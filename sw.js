@@ -1,4 +1,4 @@
-const CACHE_NAME = "academie-etoile-v2";
+const CACHE_NAME = "academie-etoile-v3";
 const CORE_ASSETS = [
   "index.html",
   "push.html",
@@ -9,6 +9,7 @@ const CORE_ASSETS = [
   "nutrition.html",
   "corps.html",
   "custom.html",
+  "suivi.html",
   "assets/style.css",
   "assets/app.js",
   "assets/icon-192.png",

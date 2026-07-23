@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi — Académie Étoile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1224">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Étoile">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<div class="wrap">
+  <div id="minibar-container"></div>
+
+  <div class="section" style="border-top:1px solid var(--iron); padding-top:34px;">
+    <div class="section-head">
+      <div class="rune-mark">Quête · Vitalité</div>
+      <h2>Le suivi scintillant</h2>
+      <p class="lede">Tes chiffres, ton objectif, ton bilan du jour — tout au même endroit. La composition des repas se passe sur la page Provisions ; ici, tu mesures les résultats.</p>
+    </div>
+
+    <div class="altar" style="margin-bottom:28px;">
+      <h3 style="font-family:var(--font-display); color:var(--gold-bright); margin-bottom:14px; font-size:16px;">✨ Calculateur personnalisé</h3>
+      <div class="lede" style="margin-top:0; margin-bottom:16px;">Renseigne tes chiffres pour obtenir tes propres objectifs (pas des règles génériques) — recalculé instantanément et <b>mémorisé</b> : reviens changer ton poids quand tu veux, tout se recalcule automatiquement (quantités des repas sur la page Provisions, objectif protéines, calories).</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:14px; margin-bottom:16px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-sexe">Sexe (pour le calcul)</label>
+          <select id="calc-sexe">
+            <option value="femme" selected>Femme</option>
+            <option value="homme">Homme</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-poids">Poids (kg)</label>
+          <input type="number" id="calc-poids" value="60" min="30" step="0.5">
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-taille">Taille (cm)</label>
+          <input type="number" id="calc-taille" value="165" min="120" step="1">
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-age">Âge</label>
+          <input type="number" id="calc-age" value="25" min="14" step="1">
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-activite">Niveau d'activité</label>
+          <select id="calc-activite">
+            <option value="1.3">Peu active (assise, peu de sport)</option>
+            <option value="1.45" selected>Modérée (3-5 séances/semaine)</option>
+            <option value="1.6">Active (sport quasi quotidien)</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="calc-deficit">Objectif</label>
+          <select id="calc-deficit">
+            <option value="-300">Prise de masse légère (+300 kcal)</option>
+            <option value="0">Maintien (0 kcal)</option>
+            <option value="300">Perte de poids légère (-300 kcal)</option>
+            <option value="500" selected>Perte de poids modérée (-500 kcal)</option>
+            <option value="750">Sèche agressive (-750 kcal)</option>
+          </select>
+        </div>
+      </div>
+      <div id="calc-results" class="nutri-grid"></div>
+    </div>
+
+    <div class="altar">
+      <h3 style="font-family:var(--font-display); color:var(--gold-bright); margin-bottom:14px; font-size:16px;">⚖ Objectif de perte de poids</h3>
+      <div class="lede" style="margin-top:0; margin-bottom:16px;">Indique combien de kilos tu veux perdre : ça s'ajuste automatiquement à ton poids et à ton déficit choisis ci-dessus.</div>
+      <div style="display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="goal-poids-a-perdre">Poids à perdre (kg)</label>
+          <input type="number" id="goal-poids-a-perdre" min="0" step="0.5" placeholder="ex: 5" style="max-width:140px;">
+        </div>
+        <button class="btn secondary" onclick="resetWeightGoalAndRender()">Réinitialiser</button>
+      </div>
+      <div id="weight-goal-results" class="nutri-grid"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Suivi du jour</div>
+      <h2>Journal calorique</h2>
+      <p class="lede">Compte tes calories consommées depuis la page Provisions ("J'ai mangé ce repas"). Les calories brûlées se calculent automatiquement à chaque quête gravée (Haut du Corps, Dos & Bras, Fessiers & Jambes selon le poids et les reps réellement faits ; Mobilité et Séance libre selon la durée renseignée). Remise à zéro automatique chaque nouveau jour.</p>
+    </div>
+    <div class="altar">
+      <div style="display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; margin-bottom:18px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="burn-goal-kcal">🎯 Objectif de calories brûlées à la salle (par jour)</label>
+          <input type="number" id="burn-goal-kcal" min="0" step="25" placeholder="ex: 250" style="max-width:160px;">
+        </div>
+        <button class="btn secondary" onclick="resetBurnGoalAndRender()">Réinitialiser</button>
+      </div>
+      <div id="daily-log-panel"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Suivi du jour</div>
+      <h2>Suppléments : shakers & barres protéinées</h2>
+      <p class="lede">Renseigne ce que t'apporte ton produit (protéines/calories par unité), compte ce que tu as pris aujourd'hui, et vois combien il t'en reste par rapport à ton objectif protéines.</p>
+    </div>
+    <div class="altar">
+      <div id="supplements-panel"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Check-in du jour</div>
+      <h2>Enregistrer ta journée</h2>
+      <p class="lede">Fais le point sur ta journée alimentaire pour renforcer ta Vitalité et ta Discipline.</p>
+    </div>
+
+    <div class="altar">
+      <div class="check-row">
+        <input type="checkbox" id="obj-calorique">
+        <label for="obj-calorique">J'ai respecté mon objectif calorique aujourd'hui</label>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="obj-proteines">
+        <label for="obj-proteines">J'ai atteint mon objectif de protéines</label>
+      </div>
+      <div class="form-row">
+        <label for="eau">Eau bue (litres)</label>
+        <input type="number" id="eau" min="0" step="0.1" value="1.5" style="max-width:140px;">
+      </div>
+      <div class="form-row">
+        <label for="poids-jour">Poids du jour (kg) — optionnel, juste pour ton suivi</label>
+        <input type="number" id="poids-jour" min="0" step="0.1" style="max-width:140px;" placeholder="ex: 60.4">
+      </div>
+      <button class="btn" onclick="validateNutrition()">Graver cette journée ⚔</button>
+    </div>
+  </div>
+</div>
+
+<footer>Académie Étoile · tes données restent stockées sur cet appareil (stockage persistant du navigateur)</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  let calcObjectifs = null; // rempli par calculerObjectifs()
+
+  function safeRun(fn, label){
+    try{ fn(); }catch(e){ console.error(`Erreur dans ${label} :`, e); }
+  }
+
+  function loadSavedProfile(){
+    const p = state.profile;
+    if(!p) return;
+    if(p.poids) document.getElementById("calc-poids").value = p.poids;
+    if(p.taille) document.getElementById("calc-taille").value = p.taille;
+    if(p.age) document.getElementById("calc-age").value = p.age;
+    if(p.activite) document.getElementById("calc-activite").value = p.activite;
+    if(p.deficit !== undefined && p.deficit !== null) document.getElementById("calc-deficit").value = p.deficit;
+    if(p.sexe) document.getElementById("calc-sexe").value = p.sexe;
+    const wg = state.weightGoal;
+    if(wg && wg.poidsAPerdre) document.getElementById("goal-poids-a-perdre").value = wg.poidsAPerdre;
+    const bg = state.burnGoal;
+    if(bg && bg.kcalPerDay) document.getElementById("burn-goal-kcal").value = bg.kcalPerDay;
+  }
+
+  function calculerObjectifs(){
+    const poids = parseFloat(document.getElementById("calc-poids").value) || 0;
+    const taille = parseFloat(document.getElementById("calc-taille").value) || 0;
+    const age = parseFloat(document.getElementById("calc-age").value) || 0;
+    const activite = parseFloat(document.getElementById("calc-activite").value) || 1.4;
+    const deficit = parseFloat(document.getElementById("calc-deficit").value);
+    const sexe = document.getElementById("calc-sexe").value;
+    const el = document.getElementById("calc-results");
+
+    if(poids <= 0 || taille <= 0 || age <= 0){
+      el.innerHTML = '<div class="empty-note">Renseigne poids, taille et âge pour voir tes objectifs.</div>';
+      return;
+    }
+
+    saveProfile(poids, taille, age, activite, deficit, sexe);
+    calcObjectifs = computeObjectifs();
+    const { tdee, objectifCalorique, proteines, lipidesBas, lipidesHaut, eauL } = calcObjectifs;
+    const deficitLabel = deficit < 0 ? "Prise de masse légère" : deficit === 0 ? "Maintien" : deficit <= 300 ? "Perte de poids légère" : deficit <= 500 ? "Perte de poids modérée" : "Sèche agressive";
+
+    if(document.getElementById("weight-goal-results")) renderWeightGoal();
+    if(document.getElementById("supplements-panel")) renderSupplements();
+    if(document.getElementById("daily-log-panel")) renderDailyLog();
+
+    el.innerHTML = `
+      <div class="nutri-card">
+        <h3>Ton estimation — ${deficitLabel}</h3>
+        <div class="macro-row"><span>Dépense estimée (maintien)</span><b>${Math.round(tdee)} kcal</b></div>
+        <div class="macro-row"><span>Objectif calorique</span><b>${Math.round(objectifCalorique)} kcal</b></div>
+        <div class="macro-row"><span>Protéines cibles</span><b>${proteines} g / jour</b></div>
+        <div class="macro-row"><span>Lipides cibles</span><b>${lipidesBas} à ${lipidesHaut} g / jour</b></div>
+        <div class="macro-row"><span>Eau conseillée</span><b>${eauL} L / jour</b></div>
+      </div>
+      <div class="nutri-card">
+        <h3>Comment lire ces chiffres</h3>
+        <p>Ce sont des <b>estimations</b> basées sur la formule de Mifflin-St Jeor, pas une mesure exacte — le métabolisme réel varie d'une personne à l'autre.</p>
+        <p style="margin-top:8px;">Pèse-toi 1 à 2 fois par semaine, à jeun, toujours dans les mêmes conditions. Si le poids ne bouge pas après 2-3 semaines, ajuste le niveau d'objectif ci-dessus.</p>
+        <p style="margin-top:8px;">Les quantités par défaut dans "Compose ton repas" (page Provisions) et le suivi des suppléments se basent sur ces chiffres — tu peux toujours les modifier toi-même.</p>
+      </div>
+    `;
+  }
+
+  function renderWeightGoal(){
+    const el = document.getElementById("weight-goal-results");
+    const poidsAPerdre = parseFloat(document.getElementById("goal-poids-a-perdre").value) || 0;
+    saveWeightGoal(poidsAPerdre || null);
+
+    if(!poidsAPerdre || poidsAPerdre <= 0){
+      el.innerHTML = '<div class="empty-note">Renseigne le nombre de kilos que tu veux perdre pour voir une estimation.</div>';
+      return;
+    }
+    if(!calcObjectifs){
+      el.innerHTML = '<div class="empty-note">Renseigne poids/taille/âge dans le calculateur ci-dessus pour voir une estimation.</div>';
+      return;
+    }
+
+    const poidsActuel = parseFloat(document.getElementById("calc-poids").value) || 0;
+    const poidsVise = Math.max(0, poidsActuel - poidsAPerdre);
+    const deficit = calcObjectifs.deficit;
+
+    let dureeHtml;
+    if(deficit > 0){
+      const semaines = Math.ceil((poidsAPerdre * 7700) / (deficit * 7));
+      const mois = (semaines / 4.345).toFixed(1);
+      dureeHtml = `<div class="macro-row"><span>Durée estimée</span><b>${semaines} semaine${semaines>1?"s":""} (~${mois} mois)</b></div>`;
+    } else {
+      dureeHtml = `<div class="empty-note">Choisis un objectif "Perte de poids" ou "Sèche" dans le calculateur ci-dessus pour estimer une durée — en Maintien ou Prise de masse, tu ne perds pas de poids.</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="nutri-card">
+        <h3>Ton objectif</h3>
+        <div class="macro-row"><span>Poids actuel</span><b>${poidsActuel} kg</b></div>
+        <div class="macro-row"><span>Poids visé</span><b>${poidsVise} kg</b></div>
+        <div class="macro-row"><span>À perdre</span><b>${poidsAPerdre} kg</b></div>
+        ${dureeHtml}
+      </div>
+      <div class="nutri-card">
+        <h3>Comment lire cette estimation</h3>
+        <p>Basée sur l'équivalence approximative <b>~7700 kcal = 1 kg de graisse</b>, avec le déficit calorique choisi dans le calculateur ci-dessus. C'est une estimation, pas une science exacte — le poids réel varie aussi selon l'eau et la digestion au jour le jour.</p>
+      </div>
+    `;
+  }
+
+  function resetWeightGoalAndRender(){
+    document.getElementById("goal-poids-a-perdre").value = "";
+    resetWeightGoal();
+    renderWeightGoal();
+  }
+
+  function resetBurnGoalAndRender(){
+    document.getElementById("burn-goal-kcal").value = "";
+    resetBurnGoal();
+    renderDailyLog();
+  }
+
+  /* ---------- Journal calorique du jour ---------- */
+  function renderDailyLog(){
+    const el = document.getElementById("daily-log-panel");
+    const { entries, kcalTotal } = dailyLogTotals();
+    const burn = dailyBurnTotals();
+    const suppKcal = supplementsTotals().caloriesTotal;
+    const consumedTotal = kcalTotal + suppKcal;
+    const target = calcObjectifs ? Math.round(calcObjectifs.objectifCalorique) : null;
+    const adjustedTarget = target !== null ? target + burn.kcalTotal : null;
+
+    let listHtml;
+    if(entries.length === 0){
+      listHtml = '<div class="empty-note">Aucun repas compté aujourd\'hui pour l\'instant — direction la page Provisions.</div>';
+    } else {
+      listHtml = entries.map((e, i) => `
+        <div class="grocery-item">
+          <span>${e.time} — ${e.label}</span>
+          <span class="grocery-qty">${e.kcal} kcal</span>
+          <button class="grocery-remove" title="Retirer cette entrée" onclick="removeDailyLogEntryAndRender(${i})">✕</button>
+        </div>
+      `).join("");
+    }
+
+    let burnListHtml;
+    if(burn.entries.length === 0){
+      burnListHtml = '<div class="empty-note">Aucun entraînement compté aujourd\'hui pour l\'instant — grave une quête pour voir tes calories brûlées ici.</div>';
+    } else {
+      burnListHtml = burn.entries.map((e, i) => `
+        <div class="grocery-item">
+          <span>${e.time} — ${e.label}</span>
+          <span class="grocery-qty">-${e.kcal} kcal</span>
+          <button class="grocery-remove" title="Retirer cette entrée" onclick="removeDailyBurnEntryAndRender(${i})">✕</button>
+        </div>
+      `).join("");
+    }
+
+    let summaryHtml;
+    if(adjustedTarget !== null){
+      const remaining = adjustedTarget - consumedTotal;
+      summaryHtml = remaining >= 0
+        ? `<div class="macro-row"><span>Il te reste</span><b class="supp-remaining-ok">${remaining} kcal</b> <span style="color:var(--parchment-dim);">sur ${adjustedTarget} kcal</span></div>`
+        : `<div class="macro-row"><span>Dépassement</span><b class="supp-remaining-over">+${Math.abs(remaining)} kcal</b> <span style="color:var(--parchment-dim);">au-dessus de ton objectif ajusté (${adjustedTarget} kcal)</span></div>`;
+    } else {
+      summaryHtml = `<div class="empty-note">Renseigne poids/taille/âge dans le calculateur plus haut pour voir ton objectif.</div>`;
+    }
+
+    let burnGoalHtml = "";
+    const goalKcal = state.burnGoal && state.burnGoal.kcalPerDay ? state.burnGoal.kcalPerDay : null;
+    if(goalKcal){
+      const pct = Math.min(100, Math.round((burn.kcalTotal / goalKcal) * 100));
+      const reached = burn.kcalTotal >= goalKcal;
+      burnGoalHtml = `
+        <div class="macro-row"><span>🎯 Objectif salle du jour</span><b class="${reached ? 'supp-remaining-ok' : ''}">${burn.kcalTotal} / ${goalKcal} kcal (${pct}%)</b></div>
+        <div class="stat-bar" style="margin-bottom:12px;"><i style="width:${pct}%; background:linear-gradient(90deg, var(--ember), var(--gold-bright));"></i></div>
+        ${reached ? '<div class="empty-note" style="text-align:left; padding:0 0 10px;">🎉 Objectif du jour atteint !</div>' : ''}
+      `;
+    }
+
+    el.innerHTML = `
+      <h3 style="font-family:var(--font-display); color:var(--gold-bright); font-size:14.5px; margin-bottom:8px;">Consommées</h3>
+      ${listHtml}
+      <h3 style="font-family:var(--font-display); color:var(--gold-bright); font-size:14.5px; margin:16px 0 8px;">Brûlées à l'entraînement</h3>
+      ${burnListHtml}
+      ${burnGoalHtml}
+      <div class="supp-summary">
+        <div class="macro-row"><span>Repas + petit-déj</span><b>${kcalTotal} kcal</b></div>
+        <div class="macro-row"><span>Shakers + barres</span><b>${suppKcal} kcal</b></div>
+        <div class="macro-row"><span>Total consommé</span><b>${consumedTotal} kcal</b></div>
+        <div class="macro-row"><span>Brûlées à l'entraînement</span><b>-${burn.kcalTotal} kcal</b></div>
+        <div class="macro-row"><span>Objectif ajusté</span><b>${adjustedTarget !== null ? adjustedTarget + " kcal" : "—"}</b></div>
+        ${summaryHtml}
+      </div>
+    `;
+  }
+
+  function removeDailyBurnEntryAndRender(index){
+    removeDailyBurnEntry(index);
+    renderDailyLog();
+  }
+
+  function removeDailyLogEntryAndRender(index){
+    removeDailyLogEntry(index);
+    renderDailyLog();
+  }
+
+  /* ---------- Suppléments du jour (shakers / barres) ---------- */
+  function renderSupplements(){
+    const t = supplementsTotals();
+    const el = document.getElementById("supplements-panel");
+    const target = calcObjectifs ? calcObjectifs.proteines : null;
+    const remaining = target !== null ? target - t.proteinTotal : null;
+
+    let remainingHtml = "";
+    if(target !== null){
+      if(remaining >= 0){
+        const shakesLeft = t.shakeProtein > 0 ? Math.floor(remaining / t.shakeProtein) : 0;
+        const barsLeft = t.barProtein > 0 ? Math.floor(remaining / t.barProtein) : 0;
+        remainingHtml = `<div class="macro-row"><span>Il te reste</span><b class="supp-remaining-ok">${remaining} g de protéines</b></div>
+          <div class="macro-row"><span>Soit encore, au choix</span><b>~${shakesLeft} shaker(s) OU ~${barsLeft} barre(s)</b></div>`;
+      } else {
+        remainingHtml = `<div class="macro-row"><span>Dépassement</span><b class="supp-remaining-over">+${Math.abs(remaining)} g au-dessus de ton objectif protéines</b></div>`;
+      }
+    } else {
+      remainingHtml = `<div class="empty-note">Renseigne poids/taille/âge dans le calculateur plus haut pour voir ce qu'il te reste.</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="supp-card">
+        <h4>🥤 Shaker protéiné</h4>
+        <div class="supp-config-row">
+          <div class="field"><label>Protéines / shaker</label><input type="number" min="0" step="1" value="${t.shakeProtein}" onchange="updateSupplementUnit('shake','Protein', this.value)"></div>
+          <div class="field"><label>Calories / shaker</label><input type="number" min="0" step="5" value="${t.shakeCalories}" onchange="updateSupplementUnit('shake','Calories', this.value)"></div>
+        </div>
+        <div class="supp-counter">
+          <button class="supp-counter-btn" onclick="changeSupplementCount('shake', -1)">−</button>
+          <span class="supp-count">${t.shakeCount}</span>
+          <button class="supp-counter-btn" onclick="changeSupplementCount('shake', 1)">+</button>
+          <span class="unit-label">pris aujourd'hui</span>
+        </div>
+      </div>
+
+      <div class="supp-card">
+        <h4>🍫 Barre protéinée</h4>
+        <div class="supp-config-row">
+          <div class="field"><label>Protéines / barre</label><input type="number" min="0" step="1" value="${t.barProtein}" onchange="updateSupplementUnit('bar','Protein', this.value)"></div>
+          <div class="field"><label>Calories / barre</label><input type="number" min="0" step="5" value="${t.barCalories}" onchange="updateSupplementUnit('bar','Calories', this.value)"></div>
+        </div>
+        <div class="supp-counter">
+          <button class="supp-counter-btn" onclick="changeSupplementCount('bar', -1)">−</button>
+          <span class="supp-count">${t.barCount}</span>
+          <button class="supp-counter-btn" onclick="changeSupplementCount('bar', 1)">+</button>
+          <span class="unit-label">prise(s) aujourd'hui</span>
+        </div>
+      </div>
+
+      <div class="supp-summary">
+        <div class="macro-row"><span>Total suppléments aujourd'hui</span><b>${t.proteinTotal} g de protéines · ${t.caloriesTotal} kcal</b></div>
+        <div class="macro-row"><span>Ton objectif protéines</span><b>${target !== null ? target + " g / jour" : "non calculé"}</b></div>
+        ${remainingHtml}
+      </div>
+    `;
+  }
+
+  function changeSupplementCount(type, delta){
+    adjustSupplementCount(type, delta);
+    renderSupplements();
+    if(document.getElementById("daily-log-panel")) renderDailyLog();
+  }
+
+  function updateSupplementUnit(type, field, value){
+    const v = parseFloat(value) || 0;
+    setSupplementUnitValue(type, field, v);
+    renderSupplements();
+    if(document.getElementById("daily-log-panel")) renderDailyLog();
+  }
+
+  function validateNutrition(){
+    const objCal = document.getElementById("obj-calorique").checked;
+    const objProt = document.getElementById("obj-proteines").checked;
+    const eau = parseFloat(document.getElementById("eau").value) || 0;
+    const poids = parseFloat(document.getElementById("poids-jour").value) || null;
+
+    if(poids){
+      state.records["poids-du-jour"] = { name: "Poids du jour", weight: poids, date: new Date().toISOString() };
+    }
+
+    const result = logNutritionDay(objCal, objProt, eau);
+    document.getElementById("minibar-container").innerHTML = renderMiniBar();
+    if(result.leveledUp){
+      showLevelUpToast();
+    } else {
+      showSimpleToast(`+${result.xpGain} XP · journée gravée`);
+    }
+  }
+
+  (async () => {
+    await initPage("suivi");
+    safeRun(loadSavedProfile, "loadSavedProfile");
+    safeRun(calculerObjectifs, "calculerObjectifs");
+    safeRun(renderWeightGoal, "renderWeightGoal");
+    safeRun(renderDailyLog, "renderDailyLog");
+    safeRun(renderSupplements, "renderSupplements");
+    document.getElementById("goal-poids-a-perdre").addEventListener("input", () => safeRun(renderWeightGoal, "renderWeightGoal"));
+    document.getElementById("burn-goal-kcal").addEventListener("input", () => {
+      const v = parseFloat(document.getElementById("burn-goal-kcal").value) || null;
+      saveBurnGoal(v);
+      safeRun(renderDailyLog, "renderDailyLog");
+    });
+    ["calc-poids","calc-taille","calc-age","calc-activite","calc-deficit","calc-sexe"].forEach(id => {
+      document.getElementById(id).addEventListener("input", () => safeRun(calculerObjectifs, "calculerObjectifs"));
+      document.getElementById(id).addEventListener("change", () => safeRun(calculerObjectifs, "calculerObjectifs"));
+    });
+  })();
+</script>
+<script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker non enregistré :", err));
+    });
+  }
+</script>
+</body>
+</html>

@@ -240,7 +240,8 @@ const DASHBOARD_CARDS = [
   { key: "cardio",     label: "Cardio & Abdos",  page: "cardio.html",    tag: "Endurance" },
   { key: "mobility",   label: "Mobilité",        page: "mobility.html",  tag: "Récupération" },
   { key: "libre",      label: "Séance libre",    page: "custom.html",    tag: "Improvise ta quête" },
-  { key: "nutrition",  label: "Provisions",      page: "nutrition.html", tag: "Nutrition" }
+  { key: "nutrition",  label: "Provisions",      page: "nutrition.html", tag: "Nutrition" },
+  { key: "suivi",      label: "Suivi",           page: "suivi.html",     tag: "Calculateur · Journal" }
 ];
 
 const NAV_PAGES = [
@@ -252,7 +253,8 @@ const NAV_PAGES = [
   { key: "mobility",  label: "Mobilité",    page: "mobility.html" },
   { key: "corps",     label: "Corps",       page: "corps.html" },
   { key: "custom",    label: "Séance libre",page: "custom.html" },
-  { key: "nutrition", label: "Provisions",  page: "nutrition.html" }
+  { key: "nutrition", label: "Provisions",  page: "nutrition.html" },
+  { key: "suivi",     label: "Suivi",       page: "suivi.html" }
 ];
 
 /* ---------- État du personnage ---------- */
@@ -273,8 +275,10 @@ function defaultState(){
     stock: {},
     supplements: defaultSupplementsState(),
     dailyLog: defaultDailyLogState(),
+    dailyBurn: defaultDailyBurnState(),
     profile: { poids: null, taille: null, age: null, activite: 1.45, deficit: 500, sexe: "femme" },
     weightGoal: { poidsAPerdre: null },
+    burnGoal: { kcalPerDay: null },
     log: [],
     updatedAt: new Date().toISOString()
   };
@@ -320,9 +324,11 @@ async function loadState(){
     if(!state.stock) state.stock = {};
     if(!state.supplements) state.supplements = defaultSupplementsState();
     if(!state.dailyLog) state.dailyLog = defaultDailyLogState();
+    if(!state.dailyBurn) state.dailyBurn = defaultDailyBurnState();
     if(!state.profile) state.profile = { poids: null, taille: null, age: null, activite: 1.45, deficit: 500, sexe: "femme" };
     if(!state.profile.sexe) state.profile.sexe = "femme";
     if(!state.weightGoal) state.weightGoal = { poidsAPerdre: null };
+    if(!state.burnGoal) state.burnGoal = { kcalPerDay: null };
     if(state.firstLogDate === undefined) state.firstLogDate = null;
     if(state.totalXPEarned === undefined) state.totalXPEarned = 0;
     if(!state.updatedAt) state.updatedAt = new Date().toISOString();
@@ -439,6 +445,74 @@ function caloriesFromMET(met, timeMin){
   return met * 3.5 * profileWeightKg() / 200 * (timeMin || 0);
 }
 
+// MET approximatifs par catégorie et par intensité ressentie (1=légère, 2=modérée, 3=intense).
+function metForTraining(categoryKey, effort){
+  const base = normalizeCategory(categoryKey);
+  const idx = effort === 3 ? 2 : effort === 2 ? 1 : 0;
+  const tables = {
+    push: [3.5, 5, 6],
+    pull: [3.5, 5, 6],
+    legs: [4, 5.5, 7],
+    mobility: [2, 2.5, 3],
+    libre: [3.5, 5, 6],
+  };
+  return (tables[base] || tables.libre)[idx];
+}
+
+/* ---------- Calories réellement brûlées PAR EXERCICE (musculation) ----------
+   Estime le temps réel passé sur l'exercice à partir des séries/répétitions
+   effectivement réalisées (≈3.5s par répétition + ≈75s de repos entre séries),
+   puis calcule les calories via la formule MET, avec un bonus d'intensité si
+   la charge est lourde par rapport à ton poids de corps (charge relative). */
+function caloriesForStrengthExercise(categoryKey, weightKg, reps, sets, effort){
+  if(!weightKg || !reps) return 0;
+  const setsCount = sets || 3;
+  const secPerRep = 3.5;
+  const restSec = 75;
+  const timeMin = (setsCount * reps * secPerRep + Math.max(0, setsCount - 1) * restSec) / 60;
+
+  const baseMet = metForTraining(categoryKey, effort);
+  const bodyWeight = profileWeightKg();
+  const relativeLoad = bodyWeight > 0 ? weightKg / bodyWeight : 0;
+  const loadBonus = Math.min(0.4, relativeLoad * 0.5);
+  const met = baseMet * (1 + loadBonus);
+
+  return caloriesFromMET(met, timeMin);
+}
+
+/* ---------- Calories brûlées du jour (entraînement) ----------
+   Journal séparé du journal des calories consommées, avec la même
+   remise à zéro quotidienne automatique. */
+function defaultDailyBurnState(){
+  return { date: todayStr(), entries: [] };
+}
+
+function ensureDailyBurnToday(){
+  if(!state.dailyBurn) state.dailyBurn = defaultDailyBurnState();
+  if(state.dailyBurn.date !== todayStr()){
+    state.dailyBurn = defaultDailyBurnState();
+  }
+}
+
+function logBurnedCalories(label, kcal){
+  ensureDailyBurnToday();
+  if(!kcal || kcal <= 0) return;
+  state.dailyBurn.entries.push({ label, kcal: Math.round(kcal), time: new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) });
+  saveState();
+}
+
+function removeDailyBurnEntry(index){
+  ensureDailyBurnToday();
+  state.dailyBurn.entries.splice(index, 1);
+  saveState();
+}
+
+function dailyBurnTotals(){
+  ensureDailyBurnToday();
+  const kcalTotal = state.dailyBurn.entries.reduce((sum, e) => sum + e.kcal, 0);
+  return { entries: state.dailyBurn.entries, kcalTotal };
+}
+
 function cardioDistanceXP(timeMin, distanceKm){
   timeMin = Math.max(0, timeMin || 0);
   distanceKm = Math.max(0, distanceKm || 0);
@@ -455,7 +529,7 @@ function cardioDifficultyXP(timeMin, difficulty){
 
 /* ---------- Log générique d'une quête d'exercices ---------- */
 // exerciseEntries: [{ slug, name, weight (kg|null), reps (int|null), done (bool) }]
-function logCategorySession(categoryKey, exerciseEntries, effort){
+function logCategorySession(categoryKey, exerciseEntries, effort, durationMin){
   const total = exerciseEntries.length;
   const doneCount = exerciseEntries.filter(e => e.done).length;
   const completionRatio = total ? doneCount / total : 0;
@@ -463,10 +537,13 @@ function logCategorySession(categoryKey, exerciseEntries, effort){
 
   let prCount = 0;
   let cardioBonusXP = 0;
+  let burnedKcal = 0;
   exerciseEntries.forEach(e => {
     if(!e.done) return;
     if(e.metricType === "distance"){
       if(!e.time || !e.distance) return;
+      const speedKmh = e.time > 0 ? e.distance / (e.time / 60) : 0;
+      burnedKcal += caloriesFromMET(metForSpeed(speedKmh), e.time);
       cardioBonusXP += cardioDistanceXP(e.time, e.distance);
       const rec = state.records[e.slug];
       if(!rec || e.distance > rec.distance){
@@ -475,6 +552,7 @@ function logCategorySession(categoryKey, exerciseEntries, effort){
       }
     } else if(e.metricType === "difficulty"){
       if(!e.time || !e.difficulty) return;
+      burnedKcal += caloriesFromMET(metForDifficulty(e.difficulty), e.time);
       cardioBonusXP += cardioDifficultyXP(e.time, e.difficulty);
       const rec = state.records[e.slug];
       const score = e.time * e.difficulty;
@@ -483,6 +561,9 @@ function logCategorySession(categoryKey, exerciseEntries, effort){
         prCount++;
       }
     } else {
+      if(e.weight && e.reps){
+        burnedKcal += caloriesForStrengthExercise(categoryKey, e.weight, e.reps, e.sets, effort);
+      }
       if(!e.weight) return;
       const rec = state.records[e.slug];
       if(!rec || e.weight > rec.weight){
@@ -491,6 +572,14 @@ function logCategorySession(categoryKey, exerciseEntries, effort){
       }
     }
   });
+
+  // Mobilité : pas de poids/reps significatifs, on estime sur la durée globale de la séance si fournie.
+  if(normalizeCategory(categoryKey) === "mobility" && durationMin){
+    burnedKcal += caloriesFromMET(metForTraining(categoryKey, effort), durationMin);
+  }
+  if(burnedKcal > 0){
+    logBurnedCalories(`${meta.label} — ${doneCount}/${total} exercices`, burnedKcal);
+  }
 
   const baseXP = 20;
   const complMult = completionRatio >= 0.9 ? 1.5 : completionRatio >= 0.5 ? 1.15 : 0.7;
@@ -518,7 +607,7 @@ function logCategorySession(categoryKey, exerciseEntries, effort){
   });
 
   saveState();
-  return { xpGain, prCount, leveledUp, doneCount, total };
+  return { xpGain, prCount, leveledUp, doneCount, total, burnedKcal: Math.round(burnedKcal) };
 }
 
 // Journée nutrition / check-in simple (pas d'exercices)
@@ -558,6 +647,27 @@ function saveProfile(poids, taille, age, activite, deficit, sexe){
   saveState();
 }
 
+/* Calcule les objectifs (TDEE, protéines, etc.) à partir du profil sauvegardé,
+   sans passer par l'UI du calculateur — utilisé par les pages qui ont besoin
+   de ces chiffres (ex: le générateur de repas) mais n'affichent pas la page Suivi. */
+function computeObjectifs(){
+  const p = state.profile;
+  if(!p || !p.poids || !p.taille || !p.age) return null;
+  const activite = p.activite || 1.45;
+  const deficit = p.deficit !== undefined && p.deficit !== null ? p.deficit : 500;
+  const bmr = p.sexe === "homme"
+    ? 10*p.poids + 6.25*p.taille - 5*p.age + 5
+    : 10*p.poids + 6.25*p.taille - 5*p.age - 161;
+  const tdee = bmr * activite;
+  const objectifCalorique = tdee - deficit;
+  const proteinMult = deficit >= 750 ? 2.2 : deficit >= 500 ? 2.0 : deficit >= 300 ? 1.85 : deficit <= 0 ? 1.6 : 1.9;
+  const proteines = Math.round(p.poids * proteinMult);
+  const lipidesBas = Math.round(p.poids * 0.8);
+  const lipidesHaut = Math.round(p.poids * 1);
+  const eauL = (p.poids * 0.035).toFixed(1);
+  return { tdee, objectifCalorique, proteines, lipidesBas, lipidesHaut, eauL, deficit };
+}
+
 function saveWeightGoal(poidsAPerdre){
   state.weightGoal = { poidsAPerdre };
   saveState();
@@ -565,6 +675,16 @@ function saveWeightGoal(poidsAPerdre){
 
 function resetWeightGoal(){
   state.weightGoal = { poidsAPerdre: null };
+  saveState();
+}
+
+function saveBurnGoal(kcalPerDay){
+  state.burnGoal = { kcalPerDay };
+  saveState();
+}
+
+function resetBurnGoal(){
+  state.burnGoal = { kcalPerDay: null };
   saveState();
 }
 
@@ -604,7 +724,7 @@ function findExerciseMatch(inputName){
   return found;
 }
 
-function evaluateCustomSession(rows, effort){
+function evaluateCustomSession(rows, effort, durationMin){
   const cleanRows = (rows || []).filter(r => r.name && r.name.trim());
   const total = cleanRows.length;
   const zoneCounts = {};
@@ -612,6 +732,8 @@ function evaluateCustomSession(rows, effort){
   const unmatched = [];
   let prCount = 0;
 
+  let burnedKcal = 0;
+  let anyWeighted = false;
   cleanRows.forEach(r => {
     const match = findExerciseMatch(r.name);
     const cat = match ? match.category : "libre";
@@ -626,6 +748,10 @@ function evaluateCustomSession(rows, effort){
         state.records[slug] = { name: match ? match.name : r.name.trim(), weight: r.weight, reps: r.reps || null, date: new Date().toISOString() };
         prCount++;
       }
+    }
+    if(r.weight && r.reps){
+      anyWeighted = true;
+      burnedKcal += caloriesForStrengthExercise(cat, r.weight, r.reps, r.sets || 3, effort);
     }
   });
 
@@ -642,6 +768,13 @@ function evaluateCustomSession(rows, effort){
   }
   if(prCount > 0){
     state.stats.force = Math.min(statCap(), state.stats.force + prCount * 2);
+  }
+
+  if(!anyWeighted && durationMin){
+    burnedKcal = caloriesFromMET(metForTraining("libre", effort), durationMin);
+  }
+  if(burnedKcal > 0){
+    logBurnedCalories(`Séance libre — ${total} exercice${total>1?"s":""}`, burnedKcal);
   }
 
   updateStreak();
@@ -661,7 +794,7 @@ function evaluateCustomSession(rows, effort){
   });
 
   saveState();
-  return { xpGain, prCount, leveledUp, total, zoneCounts, categoryCounts, unmatched, zoneLabel };
+  return { xpGain, prCount, leveledUp, total, zoneCounts, categoryCounts, unmatched, zoneLabel, burnedKcal: Math.round(burnedKcal) };
 }
 
 function renderCustomResultSummary(elId, result){
@@ -669,7 +802,7 @@ function renderCustomResultSummary(elId, result){
   const zoneKeys = Object.keys(result.zoneCounts);
   el.innerHTML = `
     <div class="exo-head" style="margin-bottom:6px;">
-      <div class="exo-pr" style="font-size:15px;">+${result.xpGain} XP${result.prCount ? " · "+result.prCount+" record(s) !" : ""}</div>
+      <div class="exo-pr" style="font-size:15px;">+${result.xpGain} XP${result.prCount ? " · "+result.prCount+" record(s) !" : ""}${result.burnedKcal > 0 ? " · ~"+result.burnedKcal+" kcal brûlées" : ""}</div>
       <div class="exo-target">${result.total} exercice${result.total>1?"s":""} évalué${result.total>1?"s":""}</div>
     </div>
     <div class="bodymap-wrap" id="custom-bodymap" style="max-width:280px; margin:14px auto;"></div>
@@ -714,7 +847,7 @@ function renderNav(activeKey){
 
   const MUSCU_KEYS = ["push","pull","legs","cardio","mobility"];
   const musculAactive = MUSCU_KEYS.includes(activeKey);
-  const plusActive = ["corps"].includes(activeKey);
+  const plusActive = ["corps","suivi"].includes(activeKey);
 
   return `
     <div class="topnav">
@@ -923,7 +1056,8 @@ function collectExerciseEntries(containerId, categoryKey){
     } else {
       const weight = parseFloat(card.querySelector(".exo-weight").value) || null;
       const reps = parseInt(card.querySelector(".exo-reps").value, 10) || null;
-      entries.push({ slug, name, weight, reps, done });
+      const sets = parseInt(program.exos[i][1], 10) || 3;
+      entries.push({ slug, name, weight, reps, sets, done });
     }
   });
   return entries;
