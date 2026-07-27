@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Carte du corps — Académie Étoile</title>
+<title>Entraînement — Académie Étoile</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
@@ -27,13 +27,15 @@
   <div class="section" style="border-top:1px solid var(--iron); padding-top:34px;">
     <div class="section-head">
       <div class="rune-mark">Anatomie féerique</div>
-      <h2>La carte du corps</h2>
-      <p class="lede">Survole ou clique une zone pour la voir s'illuminer sur le corps, et découvre les exercices qui la travaillent.</p>
+      <h2>Entraînement</h2>
+      <p class="lede">Sélectionne une zone (ou deux) sur laquelle tu veux travailler aujourd'hui — muscle, Cardio ou Mobilité. L'académie te propose la série d'exercices machine Basic-Fit correspondante, avec description, vidéo, et les champs pour graver ta séance.</p>
     </div>
 
     <div class="bodymap-wrap" id="bodymap"></div>
 
     <div class="zone-grid" id="zone-grid"></div>
+
+    <div id="zone-suggestions" style="margin-top:24px;"></div>
   </div>
 </div>
 
@@ -45,18 +47,197 @@
 <script src="assets/firebase-config.js"></script>
 <script src="assets/app.js"></script>
 <script>
+  let selectedZones = [];
+  let effort = 2;
+  const EFFORT_LABELS = {1:"Légère", 2:"Modérée", 3:"Intense"};
+
+  function youtubeSearchUrl(query){
+    return "https://www.youtube.com/results?search_query=" + encodeURIComponent(query);
+  }
+
+  function toggleZone(key){
+    if(selectedZones.includes(key)){
+      selectedZones = selectedZones.filter(z => z !== key);
+    } else {
+      if(selectedZones.length >= 2) selectedZones.shift(); // on garde au maximum 2 zones (la plus ancienne cède la place)
+      selectedZones.push(key);
+    }
+    renderZoneGrid();
+    renderBodyMapSelection();
+    renderZoneSuggestions();
+  }
+
+  function renderBodyMapSelection(){
+    const muscleZones = selectedZones.filter(z => z !== "cardio" && z !== "mobility");
+    highlightBodyZones("bodymap", muscleZones);
+  }
+
+  function renderZoneGrid(){
+    const grid = document.getElementById("zone-grid");
+    grid.innerHTML = trainingZoneList().map(zone => `
+      <div class="zone-card zone-select-card ${selectedZones.includes(zone.key) ? 'active' : ''}" onclick="toggleZone('${zone.key}')">
+        <div class="zc-label">${zone.label}</div>
+      </div>
+    `).join("");
+  }
+
+  function exerciseCardHtml(exo, idx){
+    const slug = exo.catKey + "__" + slugify(exo.name);
+    const rec = state.records[slug];
+    let prText = "Pas encore de record";
+    if(rec){
+      if(exo.metricType === "distance") prText = `Record : ${rec.distance}km en ${rec.time}min`;
+      else if(exo.metricType === "difficulty") prText = `Record : ${rec.time}min à difficulté ${rec.difficulty}`;
+      else prText = `Record : ${rec.weight}kg${rec.reps ? ' x '+rec.reps : ''}`;
+    }
+    const zoneLabels = (exo.zones || []).map(z => ZONE_EXERCISES[z] ? ZONE_EXERCISES[z].label : z).join(" · ");
+
+    let inputsHtml;
+    if(exo.metricType === "distance"){
+      inputsHtml = `
+        <div class="field"><label>Temps (min)</label><input type="number" min="0" step="1" class="exo-time" placeholder="ex: 30"></div>
+        <div class="field"><label>Distance (km)</label><input type="number" min="0" step="0.1" class="exo-distance" placeholder="ex: 5"></div>`;
+    } else if(exo.metricType === "difficulty"){
+      inputsHtml = `
+        <div class="field"><label>Temps (min)</label><input type="number" min="0" step="1" class="exo-time" placeholder="ex: 20"></div>
+        <div class="field"><label>Difficulté (1-10)</label><input type="number" min="1" max="10" step="1" class="exo-difficulty" placeholder="ex: 6"></div>`;
+    } else {
+      inputsHtml = `
+        <div class="field"><label>Poids (kg)</label><input type="number" min="0" step="0.5" class="exo-weight" placeholder="ex: 40"></div>
+        <div class="field"><label>Reps réalisées</label><input type="number" min="0" step="1" class="exo-reps" placeholder="ex: 10"></div>`;
+    }
+
+    return `
+      <div class="exo-card" data-idx="${idx}" data-catkey="${exo.catKey}" data-name="${exo.name.replace(/"/g,'&quot;')}" data-sets="${exo.sets}" data-metric="${exo.metricType || ''}">
+        <div class="exo-head">
+          <div>
+            <div class="exo-name">${exo.name}${exo.matchCount > 1 ? ' <span style="color:var(--ember-bright); font-size:11px; font-family:var(--font-mono);">★ couvre les 2 zones</span>' : ''}</div>
+            <div class="exo-target">Objectif : ${exo.sets} séries x ${exo.reps}</div>
+            <div class="exo-desc">${exo.desc}</div>
+          </div>
+          <div class="exo-pr">${prText}</div>
+        </div>
+        <div class="exo-media">
+          ${exo.machine ? `
+            <div class="exo-icon-wrap">
+              <div class="exo-icon" title="${machineLabel(exo.machine)}">${machineIconSVG(exo.machine)}</div>
+              <div class="exo-icon-label">${machineLabel(exo.machine)}</div>
+            </div>` : ""}
+          ${zoneLabels ? `
+            <div class="exo-zonemap" title="Zone travaillée : ${zoneLabels}">
+              ${zoneThumbSVG(exo.zones)}
+              <span>Zone travaillée :<br>${zoneLabels}</span>
+            </div>` : ""}
+          <a class="btn secondary" style="font-size:12px; padding:8px 14px;" target="_blank" rel="noopener" href="${youtubeSearchUrl(exo.name + ' machine musculation comment faire tuto')}">▶ Vidéo explicative</a>
+        </div>
+        <div class="exo-inputs">
+          ${inputsHtml}
+          <div class="exo-done">
+            <input type="checkbox" class="exo-check" id="chk-${idx}">
+            <label for="chk-${idx}">Faite</label>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderZoneSuggestions(){
+    const el = document.getElementById("zone-suggestions");
+    if(selectedZones.length === 0){
+      el.innerHTML = '<div class="empty-note">Sélectionne une ou deux zones ci-dessus pour recevoir une série d\'exercices machine adaptée.</div>';
+      return;
+    }
+
+    // Rassemble tous les exercices touchant au moins une des zones sélectionnées,
+    // en évitant les doublons, et en mettant en avant ceux qui couvrent les deux zones.
+    const seen = new Set();
+    const matches = [];
+    selectedZones.forEach(zoneKey => {
+      exosForTrainingZone(zoneKey).forEach(exo => {
+        if(seen.has(exo.name)) return;
+        seen.add(exo.name);
+        const matchCount = selectedZones.filter(z => (exo.zones || []).includes(z) || z === zoneKey && (exo.zones||[]).length===0).length;
+        matches.push({ ...exo, matchCount });
+      });
+    });
+    matches.sort((a, b) => b.matchCount - a.matchCount);
+
+    const zoneLabelMap = Object.fromEntries(trainingZoneList().map(z => [z.key, z.label]));
+    const zoneLabels = selectedZones.map(z => zoneLabelMap[z]).join(" + ");
+    const needsDuration = matches.some(m => normalizeCategory(m.catKey) === "mobility");
+
+    el.innerHTML = `
+      <div class="section-head" style="margin-bottom:16px;">
+        <div class="rune-mark">Série proposée</div>
+        <h2 style="font-size:20px;">${zoneLabels}</h2>
+        <p class="lede">${matches.length} exercice${matches.length > 1 ? "s" : ""} sur machine Basic-Fit pour cibler ${selectedZones.length > 1 ? "ces zones" : "cette zone"}.</p>
+      </div>
+      <div id="exo-list">${matches.map((exo, i) => exerciseCardHtml(exo, i)).join("")}</div>
+
+      <div class="altar" style="margin-top:20px;">
+        ${needsDuration ? `
+        <div class="form-row">
+          <label>Durée totale de la séance (min) — utile pour les exercices de Mobilité sans poids/reps</label>
+          <input type="number" id="zone-duration" min="0" step="5" placeholder="ex: 20" style="max-width:140px;">
+        </div>` : ""}
+        <div class="form-row">
+          <label>Intensité ressentie</label>
+          <div class="range-row">
+            <input type="range" id="zone-effort" min="1" max="3" step="1" value="2" oninput="effort=parseInt(this.value,10); document.getElementById('zone-effort-label').textContent=EFFORT_LABELS[effort];">
+            <span class="range-val" id="zone-effort-label">Modérée</span>
+          </div>
+        </div>
+        <button class="btn" onclick="validateZoneWorkout()">Graver cette séance ✨</button>
+      </div>
+    `;
+  }
+
+  function validateZoneWorkout(){
+    const cards = document.querySelectorAll("#exo-list .exo-card");
+    if(cards.length === 0) return;
+    const entries = Array.from(cards).map(card => {
+      const catKey = card.getAttribute("data-catkey");
+      const name = card.getAttribute("data-name");
+      const sets = parseInt(card.getAttribute("data-sets"), 10) || 3;
+      const metric = card.getAttribute("data-metric");
+      const done = card.querySelector(".exo-check").checked;
+      if(metric === "distance"){
+        const time = parseFloat(card.querySelector(".exo-time").value) || null;
+        const distance = parseFloat(card.querySelector(".exo-distance").value) || null;
+        return { catKey, name, metricType: "distance", time, distance, done };
+      }
+      if(metric === "difficulty"){
+        const time = parseFloat(card.querySelector(".exo-time").value) || null;
+        const difficulty = parseFloat(card.querySelector(".exo-difficulty").value) || null;
+        return { catKey, name, metricType: "difficulty", time, difficulty, done };
+      }
+      const weight = parseFloat(card.querySelector(".exo-weight").value) || null;
+      const reps = parseInt(card.querySelector(".exo-reps").value, 10) || null;
+      return { catKey, name, weight, reps, sets, done };
+    });
+
+    const zoneLabelMap = Object.fromEntries(trainingZoneList().map(z => [z.key, z.label]));
+    const zoneLabel = selectedZones.map(z => zoneLabelMap[z]).join(" + ");
+    const durationEl = document.getElementById("zone-duration");
+    const duration = durationEl ? parseFloat(durationEl.value) || null : null;
+
+    const result = logZoneWorkout(entries, effort, duration, zoneLabel);
+    document.getElementById("minibar-container").innerHTML = renderMiniBar();
+    const kcalNote = result.burnedKcal > 0 ? ` · ~${result.burnedKcal} kcal brûlées` : "";
+    if(result.leveledUp){
+      showLevelUpToast();
+    } else {
+      showSimpleToast(`+${result.xpGain} XP · ${result.doneCount}/${result.total} exercices${result.prCount ? " · "+result.prCount+" record(s) !" : ""}${kcalNote}`);
+    }
+    renderZoneSuggestions(); // rafraîchit les records affichés
+  }
+
   (async () => {
     await initPage("corps");
     document.getElementById("bodymap").innerHTML = bodyMapSVG();
-    highlightBodyZones("bodymap", []);
-
-    const grid = document.getElementById("zone-grid");
-    grid.innerHTML = Object.entries(ZONE_EXERCISES).map(([key, zone]) => `
-      <div class="zone-card" onmouseenter="highlightBodyZones('bodymap', ['${key}'])" onmouseleave="highlightBodyZones('bodymap', [])" onclick="highlightBodyZones('bodymap', ['${key}'])">
-        <div class="zc-label">${zone.label} <span style="font-family:var(--font-mono); font-size:10px; color:var(--parchment-dim);">(${zone.view === 'front' ? 'face' : 'dos'})</span></div>
-        <ul>${zone.exos.map(e => `<li>${e}</li>`).join("")}</ul>
-      </div>
-    `).join("");
+    renderZoneGrid();
+    renderBodyMapSelection();
+    renderZoneSuggestions();
   })();
 </script>
 <script>

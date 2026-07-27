@@ -289,7 +289,7 @@
       listHtml = entries.map((e, i) => `
         <div class="grocery-item">
           <span>${e.time} — ${e.label}</span>
-          <span class="grocery-qty">${e.kcal} kcal</span>
+          <span class="grocery-qty">${e.kcal} kcal${e.protein !== undefined ? " · " + e.protein + "g prot" : ""}</span>
           <button class="grocery-remove" title="Retirer cette entrée" onclick="removeDailyLogEntryAndRender(${i})">✕</button>
         </div>
       `).join("");
@@ -360,19 +360,24 @@
   /* ---------- Suppléments du jour (shakers / barres) ---------- */
   function renderSupplements(){
     const t = supplementsTotals();
+    const mealProtein = dailyLogTotals().proteinTotal || 0;
     const el = document.getElementById("supplements-panel");
     const target = calcObjectifs ? calcObjectifs.proteines : null;
-    const remaining = target !== null ? target - t.proteinTotal : null;
+    const consumedProtein = Math.round((t.proteinTotal + mealProtein) * 10) / 10;
+    const remaining = target !== null ? Math.round((target - consumedProtein) * 10) / 10 : null;
 
     let remainingHtml = "";
     if(target !== null){
       if(remaining >= 0){
         const shakesLeft = t.shakeProtein > 0 ? Math.floor(remaining / t.shakeProtein) : 0;
         const barsLeft = t.barProtein > 0 ? Math.floor(remaining / t.barProtein) : 0;
-        remainingHtml = `<div class="macro-row"><span>Il te reste</span><b class="supp-remaining-ok">${remaining} g de protéines</b></div>
+        remainingHtml = `<div class="macro-row"><span>Protéines des repas aujourd'hui</span><b>${mealProtein} g</b></div>
+          <div class="macro-row"><span>Total protéines (repas + suppléments)</span><b>${consumedProtein} g</b></div>
+          <div class="macro-row"><span>Il te reste</span><b class="supp-remaining-ok">${remaining} g de protéines</b></div>
           <div class="macro-row"><span>Soit encore, au choix</span><b>~${shakesLeft} shaker(s) OU ~${barsLeft} barre(s)</b></div>`;
       } else {
-        remainingHtml = `<div class="macro-row"><span>Dépassement</span><b class="supp-remaining-over">+${Math.abs(remaining)} g au-dessus de ton objectif protéines</b></div>`;
+        remainingHtml = `<div class="macro-row"><span>Protéines des repas aujourd'hui</span><b>${mealProtein} g</b></div>
+          <div class="macro-row"><span>Dépassement</span><b class="supp-remaining-over">+${Math.abs(remaining)} g au-dessus de ton objectif protéines</b></div>`;
       }
     } else {
       remainingHtml = `<div class="empty-note">Renseigne poids/taille/âge dans le calculateur plus haut pour voir ce qu'il te reste.</div>`;

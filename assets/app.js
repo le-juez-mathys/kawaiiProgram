@@ -222,23 +222,21 @@ const PROGRAM = {
 };
 
 const CATEGORY_META = {
-  push:      { label: "Poussée",         stat: "force",      page: "push.html" },
-  push2:     { label: "Poussée",         stat: "force",      page: "push.html" },
-  pull:      { label: "Tirage",          stat: "force",      page: "pull.html" },
-  pull2:     { label: "Tirage",          stat: "force",      page: "pull.html" },
-  legs:      { label: "Jambes",          stat: "force",      page: "legs.html" },
-  cardio:    { label: "Cardio & Abdos",  stat: "endurance",  page: "cardio.html" },
-  mobility:  { label: "Mobilité",        stat: "vitalite",   page: "mobility.html" },
+  push:      { label: "Poussée",         stat: "force",      page: "corps.html" },
+  push2:     { label: "Poussée",         stat: "force",      page: "corps.html" },
+  pull:      { label: "Tirage",          stat: "force",      page: "corps.html" },
+  pull2:     { label: "Tirage",          stat: "force",      page: "corps.html" },
+  legs:      { label: "Jambes",          stat: "force",      page: "corps.html" },
+  cardio:    { label: "Cardio & Abdos",  stat: "endurance",  page: "corps.html" },
+  mobility:  { label: "Mobilité",        stat: "vitalite",   page: "corps.html" },
+  corps:     { label: "Entraînement ciblé", stat: "force",   page: "corps.html" },
   libre:     { label: "Séance libre",    stat: "discipline", page: "custom.html" },
-  nutrition: { label: "Provisions",      stat: "vitalite",   page: "nutrition.html" }
+  nutrition: { label: "Provisions",      stat: "vitalite",   page: "nutrition.html" },
+  suivi:     { label: "Suivi",           stat: "discipline", page: "suivi.html" }
 };
 
 const DASHBOARD_CARDS = [
-  { key: "push",      label: "Haut du Corps",   page: "push.html",      tag: "Pecs · Épaules · Triceps" },
-  { key: "pull",       label: "Dos & Bras",      page: "pull.html",      tag: "Dos · Biceps" },
-  { key: "legs",       label: "Fessiers & Jambes", page: "legs.html",    tag: "Bas du corps" },
-  { key: "cardio",     label: "Cardio & Abdos",  page: "cardio.html",    tag: "Endurance" },
-  { key: "mobility",   label: "Mobilité",        page: "mobility.html",  tag: "Récupération" },
+  { key: "corps",      label: "Entraînement",    page: "corps.html",    tag: "Choisis ta zone · toutes les machines" },
   { key: "libre",      label: "Séance libre",    page: "custom.html",    tag: "Improvise ta quête" },
   { key: "nutrition",  label: "Provisions",      page: "nutrition.html", tag: "Nutrition" },
   { key: "suivi",      label: "Suivi",           page: "suivi.html",     tag: "Calculateur · Journal" }
@@ -246,16 +244,47 @@ const DASHBOARD_CARDS = [
 
 const NAV_PAGES = [
   { key: "index",     label: "Tableau",     page: "index.html" },
-  { key: "push",      label: "Haut",        page: "push.html" },
-  { key: "pull",      label: "Dos",         page: "pull.html" },
-  { key: "legs",      label: "Fessiers",    page: "legs.html" },
-  { key: "cardio",    label: "Cardio",      page: "cardio.html" },
-  { key: "mobility",  label: "Mobilité",    page: "mobility.html" },
-  { key: "corps",     label: "Corps",       page: "corps.html" },
+  { key: "corps",     label: "Entraînement",page: "corps.html" },
   { key: "custom",    label: "Séance libre",page: "custom.html" },
   { key: "nutrition", label: "Provisions",  page: "nutrition.html" },
   { key: "suivi",     label: "Suivi",       page: "suivi.html" }
 ];
+
+/* Zones sélectionnables sur la page Entraînement : les zones musculaires
+   (ZONE_EXERCISES) + deux catégories transversales Cardio et Mobilité qui
+   n'ont pas de zone musculaire propre. */
+function trainingZoneList(){
+  const zones = Object.entries(ZONE_EXERCISES).map(([key, z]) => ({ key, label: z.label }));
+  zones.push({ key: "cardio", label: "Cardio" });
+  zones.push({ key: "mobility", label: "Mobilité" });
+  return zones;
+}
+
+function exosForTrainingZone(zoneKey){
+  if(zoneKey === "cardio"){
+    return PROGRAM.cardio.exos.filter(e => (e[5] || []).length === 0).map(e => ({ ...exoToObj(e), catKey: "cardio" }));
+  }
+  if(zoneKey === "mobility"){
+    return PROGRAM.mobility.exos.map(e => ({ ...exoToObj(e), catKey: "mobility" }));
+  }
+  const names = ZONE_EXERCISES[zoneKey] ? ZONE_EXERCISES[zoneKey].exos : [];
+  return names.map(name => {
+    const found = findExerciseByNameGlobal(name);
+    return found;
+  }).filter(Boolean);
+}
+
+function exoToObj(e){
+  return { name: e[0], sets: e[1], reps: e[2], desc: e[3], machine: e[4], zones: e[5] || [], metricType: e[6] || null };
+}
+
+function findExerciseByNameGlobal(name){
+  for(const catKey of Object.keys(PROGRAM)){
+    const found = PROGRAM[catKey].exos.find(e => e[0] === name);
+    if(found) return { catKey, ...exoToObj(found) };
+  }
+  return null;
+}
 
 /* ---------- État du personnage ---------- */
 let state = null;
@@ -610,6 +639,100 @@ function logCategorySession(categoryKey, exerciseEntries, effort, durationMin){
   return { xpGain, prCount, leveledUp, doneCount, total, burnedKcal: Math.round(burnedKcal) };
 }
 
+/* Quête d'entraînement composée depuis la page Corps (sélection de zone(s)) :
+   les exercices peuvent venir de catégories différentes (ex: Épaules + Dos),
+   chacun garde sa propre catégorie d'origine pour les PR et les gains de stats. */
+function logZoneWorkout(exerciseEntries, effort, durationMin, zoneLabel){
+  const total = exerciseEntries.length;
+  const doneEntries = exerciseEntries.filter(e => e.done);
+  const doneCount = doneEntries.length;
+  const completionRatio = total ? doneCount / total : 0;
+
+  let prCount = 0;
+  let cardioBonusXP = 0;
+  let burnedKcal = 0;
+  const categoryCounts = {};
+
+  doneEntries.forEach(e => {
+    categoryCounts[e.catKey] = (categoryCounts[e.catKey] || 0) + 1;
+    const slug = e.catKey + "__" + slugify(e.name);
+
+    if(e.metricType === "distance"){
+      if(!e.time || !e.distance) return;
+      const speedKmh = e.time > 0 ? e.distance / (e.time / 60) : 0;
+      burnedKcal += caloriesFromMET(metForSpeed(speedKmh), e.time);
+      cardioBonusXP += cardioDistanceXP(e.time, e.distance);
+      const rec = state.records[slug];
+      if(!rec || e.distance > rec.distance){
+        state.records[slug] = { name: e.name, distance: e.distance, time: e.time, date: new Date().toISOString() };
+        prCount++;
+      }
+    } else if(e.metricType === "difficulty"){
+      if(!e.time || !e.difficulty) return;
+      burnedKcal += caloriesFromMET(metForDifficulty(e.difficulty), e.time);
+      cardioBonusXP += cardioDifficultyXP(e.time, e.difficulty);
+      const rec = state.records[slug];
+      const score = e.time * e.difficulty;
+      if(!rec || score > (rec.time * rec.difficulty)){
+        state.records[slug] = { name: e.name, time: e.time, difficulty: e.difficulty, date: new Date().toISOString() };
+        prCount++;
+      }
+    } else {
+      if(e.weight && e.reps){
+        burnedKcal += caloriesForStrengthExercise(e.catKey, e.weight, e.reps, e.sets, effort);
+      }
+      if(!e.weight) return;
+      const rec = state.records[slug];
+      if(!rec || e.weight > rec.weight){
+        state.records[slug] = { name: e.name, weight: e.weight, reps: e.reps || null, date: new Date().toISOString() };
+        prCount++;
+      }
+    }
+  });
+
+  // Mobilité : pas de poids/reps significatifs, on estime sur la durée globale si fournie.
+  const hasMobilityNoMetric = doneEntries.some(e => normalizeCategory(e.catKey) === "mobility" && !e.weight && !e.time);
+  if(hasMobilityNoMetric && durationMin){
+    burnedKcal += caloriesFromMET(metForTraining("mobility", effort), durationMin);
+  }
+  if(burnedKcal > 0){
+    logBurnedCalories(`Entraînement ciblé — ${zoneLabel} (${doneCount}/${total})`, burnedKcal);
+  }
+
+  const baseXP = 20;
+  const complMult = completionRatio >= 0.9 ? 1.5 : completionRatio >= 0.5 ? 1.15 : 0.7;
+  const effortMult = effort === 3 ? 1.3 : effort === 2 ? 1.1 : 1;
+  const xpGain = Math.round(baseXP * complMult * effortMult) + prCount * 8 + cardioBonusXP;
+
+  if(doneCount > 0){
+    Object.keys(categoryCounts).forEach(catKey => {
+      const weight = categoryCounts[catKey] / doneCount;
+      const gains = statGainsFor(catKey);
+      Object.keys(gains).forEach(k => {
+        state.stats[k] = Math.min(statCap(), state.stats[k] + Math.round(gains[k] * weight * complMult));
+      });
+    });
+  }
+  if(prCount > 0){
+    state.stats.force = Math.min(statCap(), state.stats.force + prCount * 2);
+  }
+
+  updateStreak();
+  const leveledUp = applyXP(xpGain);
+  state.totalSessions += 1;
+
+  const prNote = prCount > 0 ? ` · ${prCount} nouveau${prCount>1?"x":""} record${prCount>1?"s":""} !` : "";
+  state.log.push({
+    category: "corps",
+    label: `Entraînement ciblé — ${zoneLabel} (${doneCount}/${total})${prNote}`,
+    date: new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }),
+    xp: xpGain
+  });
+
+  saveState();
+  return { xpGain, prCount, leveledUp, doneCount, total, burnedKcal: Math.round(burnedKcal) };
+}
+
 // Journée nutrition / check-in simple (pas d'exercices)
 function logNutritionDay(objectifRespecte, proteinesRespectees, eauLitres){
   const checks = [objectifRespecte, proteinesRespectees].filter(Boolean).length;
@@ -734,6 +857,7 @@ function evaluateCustomSession(rows, effort, durationMin){
 
   let burnedKcal = 0;
   let anyWeighted = false;
+  const burnedPerExercise = [];
   cleanRows.forEach(r => {
     const match = findExerciseMatch(r.name);
     const cat = match ? match.category : "libre";
@@ -751,7 +875,9 @@ function evaluateCustomSession(rows, effort, durationMin){
     }
     if(r.weight && r.reps){
       anyWeighted = true;
-      burnedKcal += caloriesForStrengthExercise(cat, r.weight, r.reps, r.sets || 3, effort);
+      const exoKcal = caloriesForStrengthExercise(cat, r.weight, r.reps, r.sets || 3, effort);
+      burnedKcal += exoKcal;
+      burnedPerExercise.push({ name: r.name.trim(), kcal: Math.round(exoKcal) });
     }
   });
 
@@ -794,12 +920,24 @@ function evaluateCustomSession(rows, effort, durationMin){
   });
 
   saveState();
-  return { xpGain, prCount, leveledUp, total, zoneCounts, categoryCounts, unmatched, zoneLabel, burnedKcal: Math.round(burnedKcal) };
+  const dl = dailyLogTotals();
+  const consumedToday = dl.kcalTotal + supplementsTotals().caloriesTotal;
+
+  return {
+    xpGain, prCount, leveledUp, total, zoneCounts, categoryCounts, unmatched, zoneLabel,
+    burnedKcal: Math.round(burnedKcal), burnedPerExercise, consumedToday
+  };
 }
 
 function renderCustomResultSummary(elId, result){
   const el = document.getElementById(elId);
   const zoneKeys = Object.keys(result.zoneCounts);
+  const perExoHtml = result.burnedPerExercise && result.burnedPerExercise.length
+    ? `<div class="calo-breakdown">
+        <div class="cb-title">Calories brûlées par exercice</div>
+        ${result.burnedPerExercise.map(e => `<div class="cb-row"><span>${e.name}</span><b>${e.kcal} kcal</b></div>`).join("")}
+      </div>`
+    : "";
   el.innerHTML = `
     <div class="exo-head" style="margin-bottom:6px;">
       <div class="exo-pr" style="font-size:15px;">+${result.xpGain} XP${result.prCount ? " · "+result.prCount+" record(s) !" : ""}${result.burnedKcal > 0 ? " · ~"+result.burnedKcal+" kcal brûlées" : ""}</div>
@@ -807,6 +945,12 @@ function renderCustomResultSummary(elId, result){
     </div>
     <div class="bodymap-wrap" id="custom-bodymap" style="max-width:280px; margin:14px auto;"></div>
     <div class="exo-desc">Zones travaillées : ${result.zoneLabel}</div>
+    ${perExoHtml}
+    <div class="meal-totals" style="margin-top:14px;">
+      <span>Calories brûlées (cette séance)</span> <b>${result.burnedKcal} kcal</b>
+      <span>·</span>
+      <span>Calories consommées aujourd'hui</span> <b>${result.consumedToday} kcal</b>
+    </div>
     ${result.unmatched.length ? `<div class="exo-desc" style="color:var(--parchment-dim);">Exercices non reconnus (comptés comme "libres", gains génériques) : ${result.unmatched.join(", ")}</div>` : ""}
   `;
   document.getElementById("custom-bodymap").innerHTML = bodyMapSVG();
@@ -845,9 +989,7 @@ function renderNav(activeKey){
       </div>`;
   }
 
-  const MUSCU_KEYS = ["push","pull","legs","cardio","mobility"];
-  const musculAactive = MUSCU_KEYS.includes(activeKey);
-  const plusActive = ["corps","suivi"].includes(activeKey);
+  const activeIsCorps = activeKey === "corps";
 
   return `
     <div class="topnav">
@@ -872,10 +1014,10 @@ function renderNav(activeKey){
 
     <div class="bottom-tabbar">
       <a class="tab-item ${activeKey === 'index' ? 'active' : ''}" href="index.html"><span class="tab-icon">🏠</span><span>Tableau</span></a>
-      <a class="tab-item ${musculAactive ? 'active' : ''}" href="push.html"><span class="tab-icon">💪</span><span>Muscu</span></a>
+      <a class="tab-item ${activeIsCorps ? 'active' : ''}" href="corps.html"><span class="tab-icon">💪</span><span>Entraîner</span></a>
       <a class="tab-item ${activeKey === 'custom' ? 'active' : ''}" href="custom.html"><span class="tab-icon">✨</span><span>Libre</span></a>
       <a class="tab-item ${activeKey === 'nutrition' ? 'active' : ''}" href="nutrition.html"><span class="tab-icon">🍽</span><span>Repas</span></a>
-      <button class="tab-item ${plusActive ? 'active' : ''}" onclick="toggleMobileDrawer()"><span class="tab-icon">☰</span><span>Plus</span></button>
+      <a class="tab-item ${activeKey === 'suivi' ? 'active' : ''}" href="suivi.html"><span class="tab-icon">📊</span><span>Suivi</span></a>
     </div>
   `;
 }
@@ -1229,79 +1371,135 @@ const INGREDIENT_INFO = {
    ========================================================= */
 
 const MEAL_PROTEINS = [
-  { key:"poulet",       name:"Poulet (blanc / filet)",     cat:"Viande",         qty:150, unit:"g",      kcal:165 },
-  { key:"dinde",        name:"Dinde (escalope)",           cat:"Viande",         qty:150, unit:"g",      kcal:165 },
-  { key:"boeuf-hache",  name:"Bœuf haché 5%",              cat:"Viande",         qty:150, unit:"g",      kcal:215 },
-  { key:"boeuf-steak",  name:"Steak de bœuf",              cat:"Viande",         qty:150, unit:"g",      kcal:250 },
-  { key:"porc",         name:"Filet mignon de porc",       cat:"Viande",         qty:150, unit:"g",      kcal:180 },
-  { key:"saumon",       name:"Saumon",                     cat:"Poisson",        qty:150, unit:"g",      kcal:280 },
-  { key:"cabillaud",    name:"Cabillaud",                  cat:"Poisson",        qty:150, unit:"g",      kcal:120 },
-  { key:"thon",         name:"Thon (frais ou en boîte)",   cat:"Poisson",        qty:150, unit:"g",      kcal:185 },
-  { key:"truite",       name:"Truite",                     cat:"Poisson",        qty:150, unit:"g",      kcal:200 },
-  { key:"crevettes",    name:"Crevettes",                  cat:"Poisson",        qty:150, unit:"g",      kcal:135 },
-  { key:"maquereau",    name:"Maquereau",                  cat:"Poisson",        qty:150, unit:"g",      kcal:280 },
-  { key:"oeufs",        name:"Œufs",                       cat:"Œuf / Végétal",  qty:3,   unit:"unités", kcal:210 },
-  { key:"tofu",         name:"Tofu",                       cat:"Œuf / Végétal",  qty:150, unit:"g",      kcal:120 },
-  { key:"pois-chiches", name:"Pois chiches (cuits)",       cat:"Œuf / Végétal",  qty:150, unit:"g",      kcal:200 },
-  { key:"lentilles",    name:"Lentilles (cuites)",         cat:"Œuf / Végétal",  qty:150, unit:"g",      kcal:170 },
+  { key:"poulet-blanc", name:"Poulet (blanc / filet)",     cat:"Viande",  qty:150, unit:"g",      kcal:248, protein:46 },
+  { key:"poulet-cuisse",name:"Poulet (cuisse sans peau)",  cat:"Viande",  qty:150, unit:"g",      kcal:263, protein:39 },
+  { key:"dinde",        name:"Dinde (escalope)",           cat:"Viande",  qty:150, unit:"g",      kcal:225, protein:44 },
+  { key:"boeuf-hache",  name:"Bœuf haché 5%",              cat:"Viande",  qty:150, unit:"g",      kcal:258, protein:39 },
+  { key:"boeuf-steak",  name:"Steak de bœuf (rumsteak)",   cat:"Viande",  qty:150, unit:"g",      kcal:285, protein:47 },
+  { key:"porc",         name:"Filet mignon de porc",       cat:"Viande",  qty:150, unit:"g",      kcal:215, protein:39 },
+  { key:"veau",         name:"Escalope de veau",           cat:"Viande",  qty:150, unit:"g",      kcal:258, protein:47 },
+  { key:"agneau",       name:"Gigot d'agneau",             cat:"Viande",  qty:150, unit:"g",      kcal:330, protein:42 },
+  { key:"jambon-blanc", name:"Jambon blanc dégraissé",     cat:"Viande",  qty:100, unit:"g",      kcal:100, protein:20 },
+  { key:"saumon",       name:"Saumon",                     cat:"Poisson", qty:150, unit:"g",      kcal:312, protein:33 },
+  { key:"cabillaud",    name:"Cabillaud",                  cat:"Poisson", qty:150, unit:"g",      kcal:158, protein:35 },
+  { key:"thon-frais",   name:"Thon frais",                 cat:"Poisson", qty:150, unit:"g",      kcal:198, protein:42 },
+  { key:"thon-boite",   name:"Thon en boîte (au naturel)", cat:"Poisson", qty:150, unit:"g",      kcal:174, protein:39 },
+  { key:"truite",       name:"Truite",                     cat:"Poisson", qty:150, unit:"g",      kcal:252, protein:36 },
+  { key:"crevettes",    name:"Crevettes",                  cat:"Poisson", qty:150, unit:"g",      kcal:149, protein:32 },
+  { key:"maquereau",    name:"Maquereau",                  cat:"Poisson", qty:150, unit:"g",      kcal:393, protein:29 },
+  { key:"sardines",     name:"Sardines (boîte à l'huile égouttée)", cat:"Poisson", qty:100, unit:"g", kcal:208, protein:25 },
+  { key:"gambas",       name:"Gambas",                     cat:"Poisson", qty:150, unit:"g",      kcal:135, protein:29 },
+  { key:"oeufs",        name:"Œufs",                       cat:"Œuf / Végétal", qty:3, unit:"unités", kcal:234, protein:19 },
+  { key:"tofu",         name:"Tofu ferme",                 cat:"Œuf / Végétal", qty:150, unit:"g", kcal:218, protein:23 },
+  { key:"tempeh",       name:"Tempeh",                     cat:"Œuf / Végétal", qty:150, unit:"g", kcal:285, protein:29 },
+  { key:"seitan",       name:"Seitan",                     cat:"Œuf / Végétal", qty:150, unit:"g", kcal:180, protein:38 },
+  { key:"pois-chiches", name:"Pois chiches (cuits)",       cat:"Œuf / Végétal", qty:150, unit:"g", kcal:246, protein:14 },
+  { key:"lentilles",    name:"Lentilles (cuites)",         cat:"Œuf / Végétal", qty:150, unit:"g", kcal:174, protein:14 },
+  { key:"haricots-rouges", name:"Haricots rouges (cuits)", cat:"Œuf / Végétal", qty:150, unit:"g", kcal:191, protein:14 },
+  { key:"edamame",      name:"Edamame (cuits)",            cat:"Œuf / Végétal", qty:150, unit:"g", kcal:183, protein:17 },
+  { key:"cottage",      name:"Cottage cheese",             cat:"Œuf / Végétal", qty:150, unit:"g", kcal:147, protein:17 },
 ];
 
 const MEAL_STARCHES = [
-  { name:"Riz complet",        qty:60,  unit:"g (cru)",  kcal:215 },
-  { name:"Riz basmati",        qty:60,  unit:"g (cru)",  kcal:215 },
-  { name:"Quinoa",             qty:60,  unit:"g (cru)",  kcal:220 },
-  { name:"Pâtes complètes",    qty:70,  unit:"g (crues)",kcal:245 },
-  { name:"Patate douce",       qty:200, unit:"g",        kcal:180 },
-  { name:"Pomme de terre",     qty:200, unit:"g",        kcal:160 },
-  { name:"Semoule complète",   qty:60,  unit:"g (crue)", kcal:210 },
-  { name:"Boulgour",           qty:60,  unit:"g (cru)",  kcal:205 },
-  { name:"Pain complet",       qty:2,   unit:"tranches", kcal:150 },
+  { name:"Riz complet",        qty:60,  unit:"g (cru)",  kcal:210, protein:4.2 },
+  { name:"Riz basmati",        qty:60,  unit:"g (cru)",  kcal:210, protein:4.2 },
+  { name:"Riz sauvage",        qty:60,  unit:"g (cru)",  kcal:214, protein:9 },
+  { name:"Quinoa",             qty:60,  unit:"g (cru)",  kcal:221, protein:8.4 },
+  { name:"Pâtes complètes",    qty:70,  unit:"g (crues)",kcal:245, protein:9.1 },
+  { name:"Patate douce",       qty:200, unit:"g (cuite)",kcal:172, protein:3.2 },
+  { name:"Pomme de terre",     qty:200, unit:"g (cuite)",kcal:174, protein:4 },
+  { name:"Semoule complète",   qty:60,  unit:"g (crue)", kcal:216, protein:7.6 },
+  { name:"Boulgour",           qty:60,  unit:"g (cru)",  kcal:205, protein:7.2 },
+  { name:"Pain complet",       qty:60,  unit:"g (~2 tranches)", kcal:148, protein:7.8 },
+  { name:"Sarrasin",           qty:60,  unit:"g (cru)",  kcal:206, protein:7.8 },
+  { name:"Orge perlé",         qty:60,  unit:"g (cru)",  kcal:211, protein:6 },
+  { name:"Épeautre",           qty:60,  unit:"g (cru)",  kcal:203, protein:9 },
+  { name:"Polenta (semoule de maïs)", qty:60, unit:"g (crue)", kcal:217, protein:5.1 },
+  { name:"Couscous complet",   qty:60,  unit:"g (cru)",  kcal:213, protein:7.8 },
+  { name:"Vermicelles de riz", qty:60,  unit:"g (crus)", kcal:216, protein:3.6 },
 ];
 
 const MEAL_VEGETABLES = [
-  { name:"Brocolis",              qty:150, unit:"g", kcal:52 },
-  { name:"Haricots verts",        qty:150, unit:"g", kcal:47 },
-  { name:"Épinards",              qty:150, unit:"g", kcal:35 },
-  { name:"Courgettes",            qty:200, unit:"g", kcal:34 },
-  { name:"Poivrons",              qty:150, unit:"g", kcal:38 },
-  { name:"Carottes",              qty:150, unit:"g", kcal:62 },
-  { name:"Salade verte",          qty:80,  unit:"g", kcal:12 },
-  { name:"Champignons",           qty:150, unit:"g", kcal:33 },
-  { name:"Asperges",              qty:150, unit:"g", kcal:30 },
-  { name:"Ratatouille (mélange)", qty:200, unit:"g", kcal:100 },
-  { name:"Tomates cerises",       qty:100, unit:"g", kcal:18 },
+  { name:"Brocolis",              qty:150, unit:"g", kcal:53,  protein:4.5 },
+  { name:"Haricots verts",        qty:150, unit:"g", kcal:47,  protein:2.7 },
+  { name:"Épinards",              qty:150, unit:"g", kcal:35,  protein:4.4 },
+  { name:"Courgettes",            qty:200, unit:"g", kcal:34,  protein:2.4 },
+  { name:"Poivrons",              qty:150, unit:"g", kcal:39,  protein:1.5 },
+  { name:"Carottes",              qty:150, unit:"g", kcal:62,  protein:1.4 },
+  { name:"Salade verte",          qty:80,  unit:"g", kcal:12,  protein:1.1 },
+  { name:"Champignons",           qty:150, unit:"g", kcal:33,  protein:4.7 },
+  { name:"Asperges",              qty:150, unit:"g", kcal:30,  protein:3.3 },
+  { name:"Ratatouille (mélange)", qty:200, unit:"g", kcal:100, protein:3 },
+  { name:"Tomates cerises",       qty:100, unit:"g", kcal:18,  protein:0.9 },
+  { name:"Chou-fleur",            qty:150, unit:"g", kcal:38,  protein:3 },
+  { name:"Chou kale",             qty:150, unit:"g", kcal:74,  protein:6.5 },
+  { name:"Aubergine",             qty:150, unit:"g", kcal:38,  protein:1.5 },
+  { name:"Fenouil",               qty:150, unit:"g", kcal:47,  protein:1.8 },
+  { name:"Poireaux",              qty:150, unit:"g", kcal:47,  protein:2.3 },
+  { name:"Betterave (cuite)",     qty:150, unit:"g", kcal:66,  protein:2.6 },
+  { name:"Endives",               qty:150, unit:"g", kcal:26,  protein:1.5 },
+  { name:"Roquette",              qty:80,  unit:"g", kcal:20,  protein:2.1 },
+  { name:"Petits pois",           qty:150, unit:"g", kcal:122, protein:8.1 },
+  { name:"Navet",                 qty:150, unit:"g", kcal:42,  protein:1.4 },
+];
+
+// Sauces : pour napper/accompagner le repas (distinct des épices sèches).
+const MEAL_SAUCES = [
+  { name:"Sauce tomate maison",          qty:50, unit:"g", cat:"Épicerie",          kcal:18,  protein:0.8 },
+  { name:"Sauce yaourt-citron",          qty:50, unit:"g", cat:"Produits laitiers", kcal:23,  protein:2 },
+  { name:"Sauce curry léger (coco)",     qty:50, unit:"g", cat:"Épicerie",          kcal:45,  protein:0.8 },
+  { name:"Vinaigrette moutarde-miel",    qty:30, unit:"g", cat:"Épicerie",          kcal:75,  protein:0.2 },
+  { name:"Sauce fromage blanc-herbes",   qty:50, unit:"g", cat:"Produits laitiers", kcal:28,  protein:3.5 },
+  { name:"Sauce soja-gingembre",         qty:30, unit:"g", cat:"Épicerie",          kcal:18,  protein:1.2 },
+  { name:"Sauce barbecue légère",        qty:30, unit:"g", cat:"Épicerie",          kcal:33,  protein:0.2 },
+  { name:"Pesto léger",                  qty:30, unit:"g", cat:"Épicerie",          kcal:78,  protein:1.2 },
+  { name:"Sauce blanche allégée (béchamel light)", qty:50, unit:"g", cat:"Produits laitiers", kcal:35, protein:1.5 },
+  { name:"Salsa maison",                 qty:50, unit:"g", cat:"Fruits & légumes",  kcal:15,  protein:0.5 },
+  { name:"Tzatziki",                     qty:50, unit:"g", cat:"Produits laitiers", kcal:33,  protein:2 },
+  { name:"Guacamole léger",              qty:50, unit:"g", cat:"Fruits & légumes",  kcal:75,  protein:1 },
+  { name:"Sauce teriyaki",               qty:30, unit:"g", cat:"Épicerie",          kcal:27,  protein:0.6 },
+  { name:"Chimichurri",                  qty:30, unit:"g", cat:"Épicerie",          kcal:66,  protein:0.3 },
 ];
 
 const MEAL_SEASONINGS = [
-  { name:"Huile d'olive",             qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:120 },
-  { name:"Skyr nature (en sauce)",    qty:50,  unit:"g",          cat:"Produits laitiers", kcal:30 },
-  { name:"Citron (jus)",              qty:0.5, unit:"unité",      cat:"Fruits & légumes",  kcal:5 },
-  { name:"Vinaigre balsamique",       qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:15 },
-  { name:"Moutarde",                  qty:1,   unit:"c. à café",  cat:"Épicerie",         kcal:8 },
-  { name:"Herbes de Provence",        qty:1,   unit:"pincée",     cat:"Épicerie",         kcal:2 },
-  { name:"Ail + persil",              qty:1,   unit:"gousse",     cat:"Fruits & légumes",  kcal:5 },
-  { name:"Sauce soja légère",         qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:10 },
-  { name:"Épices (paprika / cumin)",  qty:1,   unit:"pincée",     cat:"Épicerie",         kcal:3 },
+  { name:"Huile d'olive",             qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:90,  protein:0 },
+  { name:"Huile de sésame",           qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:90,  protein:0 },
+  { name:"Beurre",                    qty:1,   unit:"c. à café",  cat:"Produits laitiers", kcal:36, protein:0 },
+  { name:"Skyr nature (en sauce)",    qty:50,  unit:"g",          cat:"Produits laitiers", kcal:32,  protein:5.5 },
+  { name:"Citron (jus)",              qty:0.5, unit:"unité",      cat:"Fruits & légumes",  kcal:5,   protein:0.2 },
+  { name:"Vinaigre balsamique",       qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:15,  protein:0 },
+  { name:"Moutarde",                  qty:1,   unit:"c. à café",  cat:"Épicerie",         kcal:8,   protein:0.5 },
+  { name:"Herbes de Provence",        qty:1,   unit:"pincée",     cat:"Épicerie",         kcal:2,   protein:0 },
+  { name:"Ail + persil",              qty:1,   unit:"gousse",     cat:"Fruits & légumes",  kcal:5,   protein:0.3 },
+  { name:"Sauce soja légère",         qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:10,  protein:1 },
+  { name:"Épices (paprika / cumin)",  qty:1,   unit:"pincée",     cat:"Épicerie",         kcal:3,   protein:0.1 },
+  { name:"Graines de sésame",         qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:52,  protein:1.6 },
+  { name:"Levure maltée",             qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:20,  protein:2.5 },
+  { name:"Parmesan râpé (léger)",     qty:1,   unit:"c. à soupe", cat:"Produits laitiers", kcal:21,  protein:1.9 },
+  { name:"Persil frais",              qty:1,   unit:"pincée",     cat:"Fruits & légumes",  kcal:1,   protein:0.1 },
+  { name:"Ciboulette",                qty:1,   unit:"pincée",     cat:"Fruits & légumes",  kcal:1,   protein:0.1 },
+  { name:"Gingembre frais",           qty:1,   unit:"petit morceau", cat:"Fruits & légumes", kcal:4,  protein:0.1 },
+  { name:"Piment d'Espelette",        qty:1,   unit:"pincée",     cat:"Épicerie",         kcal:3,   protein:0.1 },
 ];
 
 const BREAKFAST_BASES = [
-  { name:"Skyr nature",                                  qty:200, unit:"g",       cat:"Produits laitiers", kcal:120 },
-  { name:"Fromage blanc 0%",                             qty:200, unit:"g",       cat:"Produits laitiers", kcal:90 },
-  { name:"Yaourt grec",                                  qty:200, unit:"g",       cat:"Produits laitiers", kcal:200 },
-  { name:"Cottage cheese",                               qty:200, unit:"g",       cat:"Produits laitiers", kcal:200 },
-  { name:"Pancakes protéinés (œufs + flocons + skyr)",   qty:3,   unit:"pancakes",cat:"Protéines",         kcal:330 },
-  { name:"Œufs brouillés",                               qty:3,   unit:"unités",  cat:"Protéines",         kcal:240 },
+  { name:"Skyr nature",                                  qty:200, unit:"g",       cat:"Produits laitiers", kcal:126, protein:22 },
+  { name:"Fromage blanc 0%",                             qty:200, unit:"g",       cat:"Produits laitiers", kcal:94,  protein:16 },
+  { name:"Yaourt grec",                                  qty:200, unit:"g",       cat:"Produits laitiers", kcal:196, protein:20 },
+  { name:"Cottage cheese",                               qty:200, unit:"g",       cat:"Produits laitiers", kcal:196, protein:22 },
+  { name:"Pancakes protéinés (œufs + flocons + skyr)",   qty:3,   unit:"pancakes",cat:"Protéines",         kcal:330, protein:24 },
+  { name:"Œufs brouillés",                               qty:3,   unit:"unités",  cat:"Protéines",         kcal:234, protein:19 },
 ];
 
 const BREAKFAST_TOPPINGS = [
-  { name:"Flocons d'avoine",       qty:40,  unit:"g",          cat:"Épicerie",         kcal:150 },
-  { name:"Granola",                qty:30,  unit:"g",          cat:"Épicerie",         kcal:135 },
-  { name:"Fruits rouges",          qty:100, unit:"g",          cat:"Fruits & légumes",  kcal:50 },
-  { name:"Myrtilles",              qty:80,  unit:"g",          cat:"Fruits & légumes",  kcal:45 },
-  { name:"Banane",                 qty:1,   unit:"unité",      cat:"Fruits & légumes",  kcal:105 },
-  { name:"Miel",                   qty:1,   unit:"c. à café",  cat:"Épicerie",         kcal:21 },
-  { name:"Cannelle",               qty:1,   unit:"pincée",     cat:"Épicerie",         kcal:2 },
-  { name:"Beurre de cacahuète",    qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:95 },
+  { name:"Flocons d'avoine",       qty:40,  unit:"g",          cat:"Épicerie",         kcal:150, protein:5.2 },
+  { name:"Granola",                qty:30,  unit:"g",          cat:"Épicerie",         kcal:135, protein:3 },
+  { name:"Fruits rouges",          qty:100, unit:"g",          cat:"Fruits & légumes",  kcal:50,  protein:1 },
+  { name:"Myrtilles",              qty:80,  unit:"g",          cat:"Fruits & légumes",  kcal:45,  protein:0.6 },
+  { name:"Banane",                 qty:1,   unit:"unité",      cat:"Fruits & légumes",  kcal:105, protein:1.3 },
+  { name:"Miel",                   qty:1,   unit:"c. à café",  cat:"Épicerie",         kcal:21,  protein:0 },
+  { name:"Cannelle",               qty:1,   unit:"pincée",     cat:"Épicerie",         kcal:2,   protein:0 },
+  { name:"Beurre de cacahuète",    qty:1,   unit:"c. à soupe", cat:"Épicerie",         kcal:95,  protein:4 },
 ];
 
 function pickRandom(arr, excludeName){
@@ -1356,12 +1554,13 @@ function downloadGroceryList(){
 /* ---------- État des stocks ---------- */
 function buildFoodReference(){
   const ref = {};
-  MEAL_PROTEINS.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: "Protéines", kcal: p.kcal });
-  MEAL_STARCHES.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: "Féculents", kcal: p.kcal });
-  MEAL_VEGETABLES.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: "Fruits & légumes", kcal: p.kcal });
-  MEAL_SEASONINGS.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: p.cat || "Épicerie", kcal: p.kcal });
-  BREAKFAST_BASES.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: p.cat || "Protéines", kcal: p.kcal });
-  BREAKFAST_TOPPINGS.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: p.cat || "Épicerie", kcal: p.kcal });
+  MEAL_PROTEINS.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: "Protéines", kcal: p.kcal, protein: p.protein });
+  MEAL_STARCHES.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: "Féculents", kcal: p.kcal, protein: p.protein });
+  MEAL_VEGETABLES.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: "Fruits & légumes", kcal: p.kcal, protein: p.protein });
+  MEAL_SAUCES.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: p.cat || "Épicerie", kcal: p.kcal, protein: p.protein });
+  MEAL_SEASONINGS.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: p.cat || "Épicerie", kcal: p.kcal, protein: p.protein });
+  BREAKFAST_BASES.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: p.cat || "Protéines", kcal: p.kcal, protein: p.protein });
+  BREAKFAST_TOPPINGS.forEach(p => ref[p.name] = { qty: p.qty, unit: p.unit, cat: p.cat || "Épicerie", kcal: p.kcal, protein: p.protein });
   return ref;
 }
 const FOOD_REFERENCE = buildFoodReference();
@@ -1510,13 +1709,20 @@ function kcalForItem(name, qty){
   return Math.round((ref.kcal / ref.qty) * qty);
 }
 
+function proteinForItem(name, qty){
+  const ref = FOOD_REFERENCE[name];
+  if(!ref || !ref.protein || !ref.qty) return 0;
+  return Math.round((ref.protein / ref.qty) * qty * 10) / 10;
+}
+
 function logMealCalories(label, items){
   ensureDailyLogToday();
-  const detail = items.map(it => ({ name: it.name, qty: it.qty, unit: it.unit, kcal: kcalForItem(it.name, it.qty) }));
+  const detail = items.map(it => ({ name: it.name, qty: it.qty, unit: it.unit, kcal: kcalForItem(it.name, it.qty), protein: proteinForItem(it.name, it.qty) }));
   const kcal = detail.reduce((sum, it) => sum + it.kcal, 0);
-  state.dailyLog.entries.push({ label, items: detail, kcal, time: new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) });
+  const protein = Math.round(detail.reduce((sum, it) => sum + it.protein, 0) * 10) / 10;
+  state.dailyLog.entries.push({ label, items: detail, kcal, protein, time: new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) });
   saveState();
-  return kcal;
+  return { kcal, protein };
 }
 
 function removeDailyLogEntry(index){
@@ -1528,7 +1734,8 @@ function removeDailyLogEntry(index){
 function dailyLogTotals(){
   ensureDailyLogToday();
   const kcalTotal = state.dailyLog.entries.reduce((sum, e) => sum + e.kcal, 0);
-  return { entries: state.dailyLog.entries, kcalTotal };
+  const proteinTotal = Math.round(state.dailyLog.entries.reduce((sum, e) => sum + (e.protein || 0), 0) * 10) / 10;
+  return { entries: state.dailyLog.entries, kcalTotal, proteinTotal };
 }
 
 const WEEKLY_MENUS = [

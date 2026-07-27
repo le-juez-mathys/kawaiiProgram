@@ -98,33 +98,47 @@
         <div class="meal-select-row">
           <label>Protéine</label>
           <span style="flex:1; color:var(--parchment); font-family:var(--font-display);" id="meal-protein-name"></span>
-          <input type="number" id="meal-qty-protein" min="0" step="5">
+          <input type="number" id="meal-qty-protein" min="0" step="5" oninput="updateMealMacros()">
           <span class="unit-label" id="meal-unit-protein"></span>
+          <span class="meal-macro" id="meal-macro-protein"></span>
         </div>
         <div class="meal-select-row">
           <label>2. Féculent</label>
           <select id="meal-select-starch" onchange="onStarchChange()">
             <option value="">-- choisis --</option>
           </select>
-          <input type="number" id="meal-qty-starch" min="0" step="5">
+          <input type="number" id="meal-qty-starch" min="0" step="5" oninput="updateMealMacros()">
           <span class="unit-label" id="meal-unit-starch"></span>
+          <span class="meal-macro" id="meal-macro-starch"></span>
         </div>
         <div class="meal-select-row">
           <label>3. Légume</label>
           <select id="meal-select-veg" onchange="onVegChange()">
             <option value="">-- choisis --</option>
           </select>
-          <input type="number" id="meal-qty-veg" min="0" step="5">
+          <input type="number" id="meal-qty-veg" min="0" step="5" oninput="updateMealMacros()">
           <span class="unit-label" id="meal-unit-veg"></span>
+          <span class="meal-macro" id="meal-macro-veg"></span>
         </div>
         <div class="meal-select-row">
-          <label>4. Assaisonnement</label>
+          <label>4. Sauce</label>
+          <select id="meal-select-sauce" onchange="onSauceChange()">
+            <option value="">-- choisis --</option>
+          </select>
+          <input type="number" id="meal-qty-sauce" min="0" step="5" oninput="updateMealMacros()">
+          <span class="unit-label" id="meal-unit-sauce"></span>
+          <span class="meal-macro" id="meal-macro-sauce"></span>
+        </div>
+        <div class="meal-select-row">
+          <label>5. Accompagnement</label>
           <select id="meal-select-seasoning" onchange="onSeasoningChange()">
             <option value="">-- choisis --</option>
           </select>
-          <input type="number" id="meal-qty-seasoning" min="0" step="0.5">
+          <input type="number" id="meal-qty-seasoning" min="0" step="0.5" oninput="updateMealMacros()">
           <span class="unit-label" id="meal-unit-seasoning"></span>
+          <span class="meal-macro" id="meal-macro-seasoning"></span>
         </div>
+        <div class="meal-totals" id="meal-totals"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
           <button class="btn" onclick="addCurrentMealToList()">Ajouter à ma liste de courses ✨</button>
           <button class="btn secondary" onclick="eatCurrentMeal()" title="Compte ce repas dans ton total calorique du jour">🍽 J'ai mangé ce repas</button>
@@ -146,17 +160,20 @@
         <select id="breakfast-select-base" onchange="onBreakfastBaseChange()">
           <option value="">-- choisis --</option>
         </select>
-        <input type="number" id="breakfast-qty-base" min="0" step="5">
+        <input type="number" id="breakfast-qty-base" min="0" step="5" oninput="updateBreakfastMacros()">
         <span class="unit-label" id="breakfast-unit-base"></span>
+        <span class="meal-macro" id="breakfast-macro-base"></span>
       </div>
       <div class="meal-select-row">
         <label>Accompagnement</label>
         <select id="breakfast-select-topping" onchange="onBreakfastToppingChange()">
           <option value="">-- choisis --</option>
         </select>
-        <input type="number" id="breakfast-qty-topping" min="0" step="5">
+        <input type="number" id="breakfast-qty-topping" min="0" step="5" oninput="updateBreakfastMacros()">
         <span class="unit-label" id="breakfast-unit-topping"></span>
+        <span class="meal-macro" id="breakfast-macro-topping"></span>
       </div>
+      <div class="meal-totals" id="breakfast-totals"></div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
         <button class="btn" onclick="addBreakfastToList()">Ajouter à ma liste de courses ✨</button>
         <button class="btn secondary" onclick="eatBreakfast()" title="Compte ce petit-déjeuner dans ton total calorique du jour">🍽 J'ai mangé ce petit-déj</button>
@@ -281,123 +298,141 @@
     starchSel.innerHTML = '<option value="">-- choisis --</option>' + MEAL_STARCHES.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
     const vegSel = document.getElementById("meal-select-veg");
     vegSel.innerHTML = '<option value="">-- choisis --</option>' + MEAL_VEGETABLES.map(v => `<option value="${v.name}">${v.name}</option>`).join("");
+    const sauceSel = document.getElementById("meal-select-sauce");
+    sauceSel.innerHTML = '<option value="">-- choisis --</option>' + MEAL_SAUCES.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
     const seasSel = document.getElementById("meal-select-seasoning");
     seasSel.innerHTML = '<option value="">-- choisis --</option>' + MEAL_SEASONINGS.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
 
-    starchSel.value = ""; vegSel.value = ""; seasSel.value = "";
+    starchSel.value = ""; vegSel.value = ""; sauceSel.value = ""; seasSel.value = "";
     document.getElementById("meal-qty-starch").value = "";
     document.getElementById("meal-qty-veg").value = "";
+    document.getElementById("meal-qty-sauce").value = "";
     document.getElementById("meal-qty-seasoning").value = "";
     document.getElementById("meal-unit-starch").textContent = "";
     document.getElementById("meal-unit-veg").textContent = "";
+    document.getElementById("meal-unit-sauce").textContent = "";
     document.getElementById("meal-unit-seasoning").textContent = "";
+    updateMealMacros();
   }
 
   function onStarchChange(keepIfEmpty){
     const name = document.getElementById("meal-select-starch").value;
     const starch = MEAL_STARCHES.find(s => s.name === name);
-    if(!starch){ if(!keepIfEmpty) document.getElementById("meal-qty-starch").value = ""; return; }
+    if(!starch){ if(!keepIfEmpty) document.getElementById("meal-qty-starch").value = ""; updateMealMacros(); return; }
     document.getElementById("meal-qty-starch").value = defaultStarchQty(starch);
     document.getElementById("meal-unit-starch").textContent = starch.unit;
+    updateMealMacros();
   }
 
   function onVegChange(){
     const name = document.getElementById("meal-select-veg").value;
     const veg = MEAL_VEGETABLES.find(v => v.name === name);
-    if(!veg) return;
+    if(!veg){ updateMealMacros(); return; }
     document.getElementById("meal-qty-veg").value = veg.qty;
     document.getElementById("meal-unit-veg").textContent = veg.unit;
+    updateMealMacros();
+  }
+
+  function onSauceChange(){
+    const name = document.getElementById("meal-select-sauce").value;
+    const sauce = MEAL_SAUCES.find(s => s.name === name);
+    if(!sauce){ updateMealMacros(); return; }
+    document.getElementById("meal-qty-sauce").value = sauce.qty;
+    document.getElementById("meal-unit-sauce").textContent = sauce.unit;
+    updateMealMacros();
   }
 
   function onSeasoningChange(keepIfEmpty){
     const name = document.getElementById("meal-select-seasoning").value;
     const seasoning = MEAL_SEASONINGS.find(s => s.name === name);
-    if(!seasoning){ if(!keepIfEmpty) document.getElementById("meal-qty-seasoning").value = ""; return; }
+    if(!seasoning){ if(!keepIfEmpty) document.getElementById("meal-qty-seasoning").value = ""; updateMealMacros(); return; }
     document.getElementById("meal-qty-seasoning").value = defaultSeasoningQty(seasoning);
     document.getElementById("meal-unit-seasoning").textContent = seasoning.unit;
+    updateMealMacros();
+  }
+
+  /* Affiche protéines + calories en direct pour chaque ligne, et le total du repas. */
+  function updateMealMacros(){
+    const rows = [
+      { nameVal: currentProtein ? currentProtein.name : "", qtyId: "meal-qty-protein", macroId: "meal-macro-protein" },
+      { nameVal: document.getElementById("meal-select-starch").value, qtyId: "meal-qty-starch", macroId: "meal-macro-starch" },
+      { nameVal: document.getElementById("meal-select-veg").value, qtyId: "meal-qty-veg", macroId: "meal-macro-veg" },
+      { nameVal: document.getElementById("meal-select-sauce").value, qtyId: "meal-qty-sauce", macroId: "meal-macro-sauce" },
+      { nameVal: document.getElementById("meal-select-seasoning").value, qtyId: "meal-qty-seasoning", macroId: "meal-macro-seasoning" },
+    ];
+    let totalKcal = 0, totalProtein = 0;
+    rows.forEach(r => {
+      const macroEl = document.getElementById(r.macroId);
+      if(!r.nameVal){ macroEl.textContent = ""; return; }
+      const qty = parseFloat(document.getElementById(r.qtyId).value) || 0;
+      const kcal = kcalForItem(r.nameVal, qty);
+      const protein = proteinForItem(r.nameVal, qty);
+      macroEl.textContent = `→ ${protein}g prot · ${kcal} kcal`;
+      totalKcal += kcal; totalProtein += protein;
+    });
+    const totalsEl = document.getElementById("meal-totals");
+    if(!currentProtein){ totalsEl.innerHTML = ""; return; }
+    totalsEl.innerHTML = `<span>Total du repas</span> <b>${Math.round(totalProtein*10)/10} g de protéines</b> · <b>${Math.round(totalKcal)} kcal</b>`;
   }
 
   function getComposedMealParts(){
     if(!currentProtein) return null;
     const starchName = document.getElementById("meal-select-starch").value;
     const vegName = document.getElementById("meal-select-veg").value;
+    const sauceName = document.getElementById("meal-select-sauce").value;
     const seasoningName = document.getElementById("meal-select-seasoning").value;
-    if(!starchName || !vegName || !seasoningName) return null;
+    if(!starchName || !vegName || !sauceName || !seasoningName) return null;
     const starch = MEAL_STARCHES.find(s => s.name === starchName);
     const vegetable = MEAL_VEGETABLES.find(v => v.name === vegName);
+    const sauce = MEAL_SAUCES.find(s => s.name === sauceName);
     const seasoning = MEAL_SEASONINGS.find(s => s.name === seasoningName);
     return {
-      protein: { name: currentProtein.name, qty: parseFloat(document.getElementById("meal-qty-protein").value) || currentProtein.qty },
-      starch: { name: starch.name, qty: parseFloat(document.getElementById("meal-qty-starch").value) || starch.qty },
-      vegetable: { name: vegetable.name, qty: parseFloat(document.getElementById("meal-qty-veg").value) || vegetable.qty },
-      seasoning: { name: seasoning.name, qty: parseFloat(document.getElementById("meal-qty-seasoning").value) || seasoning.qty },
+      protein: { name: currentProtein.name, qty: parseFloat(document.getElementById("meal-qty-protein").value) || currentProtein.qty, unit: currentProtein.unit },
+      starch: { name: starch.name, qty: parseFloat(document.getElementById("meal-qty-starch").value) || starch.qty, unit: starch.unit },
+      vegetable: { name: vegetable.name, qty: parseFloat(document.getElementById("meal-qty-veg").value) || vegetable.qty, unit: vegetable.unit },
+      sauce: { name: sauce.name, qty: parseFloat(document.getElementById("meal-qty-sauce").value) || sauce.qty, unit: sauce.unit, cat: sauce.cat },
+      seasoning: { name: seasoning.name, qty: parseFloat(document.getElementById("meal-qty-seasoning").value) || seasoning.qty, unit: seasoning.unit, cat: seasoning.cat },
     };
   }
 
   function addCurrentMealToList(){
+    const m = getComposedMealParts();
     if(!currentProtein){ showSimpleToast("Choisis d'abord une protéine."); return; }
-    const starchName = document.getElementById("meal-select-starch").value;
-    const vegName = document.getElementById("meal-select-veg").value;
-    const seasoningName = document.getElementById("meal-select-seasoning").value;
-    if(!starchName || !vegName || !seasoningName){
-      showSimpleToast("Choisis un féculent, un légume ET un assaisonnement avant d'ajouter.");
+    if(!m){
+      showSimpleToast("Choisis un féculent, un légume, une sauce ET un accompagnement avant d'ajouter.");
       return;
     }
-    const starch = MEAL_STARCHES.find(s => s.name === starchName);
-    const vegetable = MEAL_VEGETABLES.find(v => v.name === vegName);
-    const seasoning = MEAL_SEASONINGS.find(s => s.name === seasoningName);
-
-    const proteinQty = parseFloat(document.getElementById("meal-qty-protein").value) || currentProtein.qty;
-    const starchQty = parseFloat(document.getElementById("meal-qty-starch").value) || starch.qty;
-    const vegQty = parseFloat(document.getElementById("meal-qty-veg").value) || vegetable.qty;
-    const seasoningQty = parseFloat(document.getElementById("meal-qty-seasoning").value) || seasoning.qty;
-
-    addGroceryItem({ name: currentProtein.name, qty: proteinQty, unit: currentProtein.unit, cat: "Protéines" });
-    addGroceryItem({ name: starch.name,         qty: starchQty,  unit: starch.unit,         cat: "Féculents" });
-    addGroceryItem({ name: vegetable.name,      qty: vegQty,     unit: vegetable.unit,      cat: "Fruits & légumes" });
-    addGroceryItem({ name: seasoning.name,      qty: seasoningQty, unit: seasoning.unit,    cat: seasoning.cat || "Épicerie" });
+    addGroceryItem({ name: m.protein.name, qty: m.protein.qty, unit: m.protein.unit, cat: "Protéines" });
+    addGroceryItem({ name: m.starch.name,  qty: m.starch.qty,  unit: m.starch.unit,  cat: "Féculents" });
+    addGroceryItem({ name: m.vegetable.name, qty: m.vegetable.qty, unit: m.vegetable.unit, cat: "Fruits & légumes" });
+    addGroceryItem({ name: m.sauce.name,   qty: m.sauce.qty,   unit: m.sauce.unit,   cat: m.sauce.cat || "Épicerie" });
+    addGroceryItem({ name: m.seasoning.name, qty: m.seasoning.qty, unit: m.seasoning.unit, cat: m.seasoning.cat || "Épicerie" });
     saveState();
 
     renderGroceryList();
     showSimpleToast("Repas ajouté à la liste de courses");
   }
 
-  function getComposedMealPartsFull(){
-    const starchName = document.getElementById("meal-select-starch").value;
-    const vegName = document.getElementById("meal-select-veg").value;
-    const seasoningName = document.getElementById("meal-select-seasoning").value;
-    if(!currentProtein || !starchName || !vegName || !seasoningName) return null;
-    const starch = MEAL_STARCHES.find(s => s.name === starchName);
-    const vegetable = MEAL_VEGETABLES.find(v => v.name === vegName);
-    const seasoning = MEAL_SEASONINGS.find(s => s.name === seasoningName);
-    return {
-      protein: { name: currentProtein.name, qty: parseFloat(document.getElementById("meal-qty-protein").value) || currentProtein.qty },
-      starch: { name: starch.name, qty: parseFloat(document.getElementById("meal-qty-starch").value) || starch.qty },
-      vegetable: { name: vegetable.name, qty: parseFloat(document.getElementById("meal-qty-veg").value) || vegetable.qty },
-      seasoning: { name: seasoning.name, qty: parseFloat(document.getElementById("meal-qty-seasoning").value) || seasoning.qty },
-    };
-  }
-
   function consumeCurrentMealFromStock(){
-    const parts = getComposedMealPartsFull();
+    const parts = getComposedMealParts();
     if(!parts){
-      showSimpleToast("Choisis une protéine, un féculent, un légume ET un assaisonnement d'abord.");
+      showSimpleToast("Choisis une protéine, un féculent, un légume, une sauce ET un accompagnement d'abord.");
       return;
     }
-    [parts.protein, parts.starch, parts.vegetable, parts.seasoning].forEach(p => consumeStockQty(p.name, p.qty));
+    [parts.protein, parts.starch, parts.vegetable, parts.sauce, parts.seasoning].forEach(p => consumeStockQty(p.name, p.qty));
     renderStock();
     showSimpleToast("Repas retiré de ton stock");
   }
 
   function eatCurrentMeal(){
-    const parts = getComposedMealPartsFull();
+    const parts = getComposedMealParts();
     if(!parts){
-      showSimpleToast("Choisis une protéine, un féculent, un légume ET un assaisonnement d'abord.");
+      showSimpleToast("Choisis une protéine, un féculent, un légume, une sauce ET un accompagnement d'abord.");
       return;
     }
-    const items = [parts.protein, parts.starch, parts.vegetable, parts.seasoning];
-    const kcal = logMealCalories(`Repas — ${parts.protein.name}`, items);
-    showSimpleToast(`Repas compté : +${kcal} kcal aujourd'hui (voir la page Suivi)`);
+    const items = [parts.protein, parts.starch, parts.vegetable, parts.sauce, parts.seasoning];
+    const { kcal, protein } = logMealCalories(`Repas — ${parts.protein.name}`, items);
+    showSimpleToast(`Repas compté : +${kcal} kcal · +${protein}g protéines aujourd'hui (voir la page Suivi)`);
   }
 
   /* ---------- Petit-déjeuner ---------- */
@@ -411,17 +446,39 @@
   function onBreakfastBaseChange(){
     const name = document.getElementById("breakfast-select-base").value;
     const base = BREAKFAST_BASES.find(b => b.name === name);
-    if(!base) return;
+    if(!base){ updateBreakfastMacros(); return; }
     document.getElementById("breakfast-qty-base").value = base.qty;
     document.getElementById("breakfast-unit-base").textContent = base.unit;
+    updateBreakfastMacros();
   }
 
   function onBreakfastToppingChange(){
     const name = document.getElementById("breakfast-select-topping").value;
     const topping = BREAKFAST_TOPPINGS.find(t => t.name === name);
-    if(!topping) return;
+    if(!topping){ updateBreakfastMacros(); return; }
     document.getElementById("breakfast-qty-topping").value = topping.qty;
     document.getElementById("breakfast-unit-topping").textContent = topping.unit;
+    updateBreakfastMacros();
+  }
+
+  function updateBreakfastMacros(){
+    const rows = [
+      { nameVal: document.getElementById("breakfast-select-base").value, qtyId: "breakfast-qty-base", macroId: "breakfast-macro-base" },
+      { nameVal: document.getElementById("breakfast-select-topping").value, qtyId: "breakfast-qty-topping", macroId: "breakfast-macro-topping" },
+    ];
+    let totalKcal = 0, totalProtein = 0;
+    rows.forEach(r => {
+      const macroEl = document.getElementById(r.macroId);
+      if(!r.nameVal){ macroEl.textContent = ""; return; }
+      const qty = parseFloat(document.getElementById(r.qtyId).value) || 0;
+      const kcal = kcalForItem(r.nameVal, qty);
+      const protein = proteinForItem(r.nameVal, qty);
+      macroEl.textContent = `→ ${protein}g prot · ${kcal} kcal`;
+      totalKcal += kcal; totalProtein += protein;
+    });
+    const totalsEl = document.getElementById("breakfast-totals");
+    if(!rows[0].nameVal && !rows[1].nameVal){ totalsEl.innerHTML = ""; return; }
+    totalsEl.innerHTML = `<span>Total du petit-déj</span> <b>${Math.round(totalProtein*10)/10} g de protéines</b> · <b>${Math.round(totalKcal)} kcal</b>`;
   }
 
   function getComposedBreakfastParts(){
@@ -458,8 +515,8 @@
   function eatBreakfast(){
     const parts = getComposedBreakfastParts();
     if(!parts){ showSimpleToast("Choisis une base ET un accompagnement d'abord."); return; }
-    const kcal = logMealCalories(`Petit-déjeuner — ${parts.base.name}`, [parts.base, parts.topping]);
-    showSimpleToast(`Petit-déj compté : +${kcal} kcal aujourd'hui (voir la page Suivi)`);
+    const { kcal, protein } = logMealCalories(`Petit-déjeuner — ${parts.base.name}`, [parts.base, parts.topping]);
+    showSimpleToast(`Petit-déj compté : +${kcal} kcal · +${protein}g protéines aujourd'hui (voir la page Suivi)`);
   }
 
   function renderGroceryList(){

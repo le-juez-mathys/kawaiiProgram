@@ -266,6 +266,15 @@ a{color:inherit;}
 .meal-select-row select{flex:1; min-width:180px; background:var(--track); border:1px solid var(--iron-light); color:var(--parchment); padding:8px 10px; border-radius:14px; font-family:var(--font-body); font-size:14px;}
 .meal-select-row input[type=number]{width:90px; background:var(--track); border:1px solid var(--iron-light); color:var(--parchment); padding:8px 10px; border-radius:14px; font-family:var(--font-body); font-size:14px;}
 .meal-select-row .unit-label{font-family:var(--font-mono); font-size:11px; color:var(--parchment-dim); white-space:nowrap;}
+.meal-macro{font-family:var(--font-mono); font-size:11.5px; color:var(--gold-bright); white-space:nowrap; min-width:130px;}
+.meal-totals{margin:14px 0; padding:12px 16px; background:var(--track); border:1px solid var(--iron); border-radius:14px; font-family:var(--font-mono); font-size:13.5px; color:var(--parchment); display:flex; gap:22px; flex-wrap:wrap;}
+.meal-totals b{color:var(--ember-bright);}
+
+.calo-breakdown{margin-top:14px; padding:12px 16px; background:var(--track); border:1px solid var(--iron); border-radius:14px;}
+.calo-breakdown .cb-title{font-family:var(--font-mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:8px;}
+.calo-breakdown .cb-row{display:flex; justify-content:space-between; gap:10px; font-size:13.5px; color:var(--parchment); padding:4px 0; border-bottom:1px solid rgba(58,63,71,0.3);}
+.calo-breakdown .cb-row:last-child{border-bottom:none;}
+.calo-breakdown .cb-row b{color:var(--ember-bright); white-space:nowrap;}
 
 /* ---------- Liste de courses ---------- */
 .grocery-cat{margin-bottom:16px;}
@@ -399,6 +408,8 @@ footer{text-align:center; padding:30px 20px; color:var(--parchment-dim); font-si
 .zone-card .zc-label{font-family:var(--font-display); font-size:15px; color:var(--gold-bright);}
 .zone-card ul{margin-top:8px; padding-left:16px;}
 .zone-card li{font-size:13px; color:var(--parchment-dim);}
+.zone-select-card{cursor:pointer; text-align:center; padding:16px 10px;}
+.zone-select-card.active{border-color:var(--gold); background:rgba(201,147,46,0.1);}
 
 /* ---------- AVATAR ---------- */
 .avatar-panel{
