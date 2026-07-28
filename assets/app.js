@@ -5,6 +5,7 @@
 const STORAGE_KEY = "etoileAcademyCharacter_v1";
 
 let currentUser = null;
+let lastCoinSyncStatus = "unknown"; // "ok" | "error" | "offline" | "unknown" — visible dans la minibar
 
 /* ---------- Connexion & synchronisation (Firebase Auth + Firestore) ----------
    Une fois connecté avec Google sur un appareil, Firebase garde la session
@@ -101,23 +102,19 @@ const COINS_PER_XP = 300;
 const SHARED_COIN_DOC = "kawaii";
 
 async function cloudGetSharedCoins(){
-  if(!isCloudConfigured()) return null;
+  if(!isCloudConfigured()){
+    lastCoinSyncStatus = "offline";
+    return null;
+  }
   try{
     const snap = await db.collection("sharedCoins").doc(SHARED_COIN_DOC).get();
+    lastCoinSyncStatus = "ok";
     return snap.exists ? snap.data() : null;
   }catch(e){
     console.warn("Lecture des pièces partagées indisponible :", e);
+    lastCoinSyncStatus = "error";
     return null;
   }
-}
-
-function cloudIncrementSharedCoins(delta){
-  if(!isCloudConfigured() || !delta) return;
-  db.collection("sharedCoins").doc(SHARED_COIN_DOC).set({
-    coins: firebase.firestore.FieldValue.increment(delta),
-    name: "Étoile Filante",
-    updatedAt: new Date().toISOString()
-  }, { merge: true }).catch(e => console.warn("Envoi des pièces indisponible :", e));
 }
 
 async function refreshCoinsCache(){
@@ -135,13 +132,42 @@ async function refreshCoinsCache(){
 function grantCoinsFromXP(){
   const totalCoinsEver = Math.floor(state.totalXPEarned / COINS_PER_XP);
   if(totalCoinsEver > state.coinsGranted){
-    const delta = totalCoinsEver - state.coinsGranted;
     state.coinsGranted = totalCoinsEver;
-    state.coinsCache = (state.coinsCache || 0) + delta;
-    cloudIncrementSharedCoins(delta);
-    return delta;
+    // Valeur d'affichage optimiste en attendant confirmation du serveur.
+    if(state.coinsCache === undefined || state.coinsCache === null || state.coinsCache < state.coinsGranted){
+      state.coinsCache = state.coinsGranted;
+    }
   }
-  return 0;
+  trySendPendingCoins();
+}
+
+/* Envoie à Firestore la différence entre les pièces "gagnées" localement
+   (coinsGranted) et celles dont l'envoi a été RÉELLEMENT confirmé par le
+   serveur (coinsConfirmedSent). Si un envoi précédent avait échoué (panne,
+   règles non publiées...), cette différence reste positive et la fonction
+   réessaie automatiquement à chaque chargement et à chaque gain d'XP —
+   aucune pièce n'est donc jamais perdue en silence. */
+function trySendPendingCoins(){
+  const pending = state.coinsGranted - (state.coinsConfirmedSent || 0);
+  if(pending <= 0) return;
+  if(!isCloudConfigured()){
+    console.warn(`${pending} pièce(s) en attente d'envoi à Firestore, mais Firebase n'est pas connecté.`);
+    lastCoinSyncStatus = "offline";
+    return;
+  }
+  db.collection("sharedCoins").doc(SHARED_COIN_DOC).set({
+    coins: firebase.firestore.FieldValue.increment(pending),
+    name: "Étoile Filante",
+    updatedAt: new Date().toISOString()
+  }, { merge: true }).then(() => {
+    state.coinsConfirmedSent = (state.coinsConfirmedSent || 0) + pending;
+    lastCoinSyncStatus = "ok";
+    saveState();
+    refreshCoinsCache();
+  }).catch(e => {
+    console.warn(`Envoi de ${pending} pièce(s) indisponible (nouvelle tentative au prochain chargement) :`, e);
+    lastCoinSyncStatus = "error";
+  });
 }
 
 const DB_NAME = "etoileAcademyDB";
@@ -370,6 +396,7 @@ function defaultState(){
     supplements: defaultSupplementsState(),
     savedMeals: [],
     coinsGranted: 0,
+    coinsConfirmedSent: 0,
     coinsCache: 0,
     dailyLog: defaultDailyLogState(),
     dailyBurn: defaultDailyBurnState(),
@@ -430,6 +457,7 @@ async function loadState(){
     if(state.firstLogDate === undefined) state.firstLogDate = null;
     if(state.totalXPEarned === undefined) state.totalXPEarned = 0;
     if(state.coinsGranted === undefined) state.coinsGranted = 0;
+    if(state.coinsConfirmedSent === undefined) state.coinsConfirmedSent = 0;
     if(state.coinsCache === undefined) state.coinsCache = 0;
     if(!state.updatedAt) state.updatedAt = new Date().toISOString();
 
@@ -438,7 +466,7 @@ async function loadState(){
     // avec le vrai solde partagé (qui peut avoir baissé si des pièces ont été
     // dépensées depuis "Le Trésor Commun").
     grantCoinsFromXP();
-    refreshCoinsCache();
+    await refreshCoinsCache();
 
     // Garde le cache local et le cloud alignés l'un sur l'autre, quelle que
     // soit la source retenue ci-dessus.
@@ -1131,6 +1159,12 @@ function coinIconSVG(size){
 function renderMiniBar(){
   const needed = xpNeededFor(state.level);
   const pct = Math.min(100, Math.round((state.xp / needed) * 100));
+  const syncLabel = {
+    ok: '<span style="color:var(--green,#6fb890);">● pièces synchronisées</span>',
+    error: '<span style="color:var(--blood);" title="Erreur Firestore — voir la console (F12)">⚠ erreur d\'envoi des pièces</span>',
+    offline: '<span style="color:var(--parchment-dim);" title="Firebase non connecté — vérifie assets/firebase-config.js">○ pièces non connectées</span>',
+    unknown: ''
+  }[lastCoinSyncStatus] || '';
   return `
     <div class="minibar">
       <div>
@@ -1141,7 +1175,10 @@ function renderMiniBar(){
         <div class="mb-xptrack"><div class="mb-xpfill" style="width:${pct}%"></div></div>
         <div class="mb-xplabel"><span>${state.xp} XP</span><span>${needed} XP pour le niveau suivant</span></div>
       </div>
-      <div class="mb-coins" title="1 pièce tous les 300 XP — à dépenser sur Le Trésor Commun">${coinIconSVG(22)} <b>${state.coinsCache || 0}</b></div>
+      <div class="mb-coins" title="1 pièce tous les 300 XP — à dépenser sur Le Trésor Commun">
+        ${coinIconSVG(22)} <b>${state.coinsCache || 0}</b>
+        ${syncLabel ? `<span style="font-family:var(--font-mono); font-size:10px; margin-left:6px;">${syncLabel}</span>` : ""}
+      </div>
       <div class="mb-streak">Séquence : <b>${state.streak}${state.streak===1?" jour":" jours"}</b></div>
     </div>
   `;
