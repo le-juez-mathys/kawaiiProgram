@@ -2,7 +2,7 @@
    CONFIGURATION FIREBASE — connexion Google + synchronisation
    =========================================================
 
-   Sans cette configuration, la Académie Étoile fonctionne quand même,
+   Sans cette configuration, Scream Gym fonctionne quand même,
    mais uniquement en local sur cet appareil/navigateur (IndexedDB).
 
    Pour activer la connexion automatique et la synchronisation entre
@@ -90,5 +90,5 @@ try{
     // seule tant que la personne ne se déconnecte pas explicitement.
   }
 }catch(e){
-  console.warn("Firebase non configuré ou invalide — la Académie Étoile fonctionne en local uniquement.", e);
+  console.warn("Firebase non configuré ou invalide — Scream Gym fonctionne en local uniquement.", e);
 }

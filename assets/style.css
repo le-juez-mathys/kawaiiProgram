@@ -1,21 +1,21 @@
 :root{
-  --void:#fbe4ec;
-  --track:#f5d0de;
-  --panel:#fffbfc;
-  --panel-raised:#fdeef3;
-  --iron:#f0c9d8;
-  --iron-light:#e0a8c0;
-  --ember:#f0a868;
-  --ember-bright:#d9773a;
-  --gold:#f0d896;
-  --gold-bright:#c9932e;
-  --blood:#e0607a;
-  --parchment:#4a3540;
-  --parchment-dim:#8a7080;
-  --green:#6fb890;
-  --blue:#7a9cc9;
-  --font-display:'Fredoka', sans-serif;
-  --font-body:'Quicksand', sans-serif;
+  --void:#0a0808;
+  --track:#1f1414;
+  --panel:#150e0e;
+  --panel-raised:#1c1414;
+  --iron:#3d2020;
+  --iron-light:#5c2b2b;
+  --ember:#8b1a1a;
+  --ember-bright:#c41e2f;
+  --gold:#8a7048;
+  --gold-bright:#c9a35d;
+  --blood:#a30000;
+  --parchment:#f5f5f5;
+  --parchment-dim:#b0b0b0;
+  --green:#4a6b4a;
+  --blue:#4a5a6b;
+  --font-display:'Nosifer', cursive;
+  --font-body:'Crimson Pro', serif;
   --font-mono:'JetBrains Mono', monospace;
 }
 

@@ -157,7 +157,7 @@ function trySendPendingCoins(){
   }
   db.collection("sharedCoins").doc(SHARED_COIN_DOC).set({
     coins: firebase.firestore.FieldValue.increment(pending),
-    name: "Étoile Filante",
+    name: "Scream Gym",
     updatedAt: new Date().toISOString()
   }, { merge: true }).then(() => {
     state.coinsConfirmedSent = (state.coinsConfirmedSent || 0) + pending;
@@ -486,12 +486,12 @@ async function saveState(){
 function xpNeededFor(level){ return 100 + (level - 1) * 60; }
 
 function rankFor(level){
-  if(level >= 20) return "LÉGENDE SCINTILLANTE";
-  if(level >= 15) return "PRÊTRESSE DES ÉTOILES";
-  if(level >= 10) return "GARDIENNE CÉLESTE";
-  if(level >= 6) return "ÉTOILE FILANTE";
-  if(level >= 3) return "ÉTINCELLE — en pleine lumière";
-  return "BOURGEON — apprentie";
+  if(level >= 20) return "LÉGENDE DU SLASHER";
+  if(level >= 15) return "OMBRE SANGLANTE";
+  if(level >= 10) return "REINE DU MASSACRE";
+  if(level >= 6) return "CHASSEUSE DE FRISSONS";
+  if(level >= 3) return "SURVIVANTE — ça commence à saigner";
+  return "VICTIME — encore fraîche";
 }
 
 function statCap(){ return 100; }
@@ -1083,7 +1083,7 @@ function renderNav(activeKey){
   if(!isCloudConfigured()){
     accountHtml = `<div class="account-chip" title="Configure assets/firebase-config.js pour activer la synchronisation">Local uniquement</div>`;
   } else if(currentUser){
-    const name = currentUser.displayName || currentUser.email || "Étoile connectée";
+    const name = currentUser.displayName || currentUser.email || "Survivante connectée";
     accountHtml = `
       <div class="account-chip" title="Synchronisé en ligne avec ce compte">
         <span class="account-code">${name}</span>
@@ -1102,14 +1102,14 @@ function renderNav(activeKey){
   return `
     <div class="topnav">
       <div class="topnav-inner">
-        <a class="brand" href="index.html">✨ ACADÉMIE ÉTOILE</a>
+        <a class="brand" href="index.html">🔪 SCREAM GYM</a>
         <div class="navlinks">${links}</div>
         ${accountHtml}
       </div>
     </div>
 
     <div class="mobile-topbar">
-      <a class="brand" href="index.html">✨ ACADÉMIE ÉTOILE</a>
+      <a class="brand" href="index.html">🔪 SCREAM GYM</a>
       <button class="mobile-menu-btn" onclick="toggleMobileDrawer()">☰</button>
     </div>
 
@@ -1123,7 +1123,7 @@ function renderNav(activeKey){
     <div class="bottom-tabbar">
       <a class="tab-item ${activeKey === 'index' ? 'active' : ''}" href="index.html"><span class="tab-icon">🏠</span><span>Tableau</span></a>
       <a class="tab-item ${activeIsCorps ? 'active' : ''}" href="corps.html"><span class="tab-icon">💪</span><span>Entraîner</span></a>
-      <a class="tab-item ${activeKey === 'custom' ? 'active' : ''}" href="custom.html"><span class="tab-icon">✨</span><span>Libre</span></a>
+      <a class="tab-item ${activeKey === 'custom' ? 'active' : ''}" href="custom.html"><span class="tab-icon">🔪</span><span>Libre</span></a>
       <a class="tab-item ${activeKey === 'nutrition' ? 'active' : ''}" href="nutrition.html"><span class="tab-icon">🍽</span><span>Repas</span></a>
       <a class="tab-item ${activeKey === 'suivi' ? 'active' : ''}" href="suivi.html"><span class="tab-icon">📊</span><span>Suivi</span></a>
     </div>
@@ -1152,7 +1152,7 @@ function coinIconSVG(size){
   return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" style="vertical-align:-4px;">
     <circle cx="20" cy="20" r="18" fill="var(--gold)" stroke="var(--gold-bright)" stroke-width="2"/>
     <circle cx="20" cy="20" r="13" fill="none" stroke="var(--gold-bright)" stroke-width="1.4" stroke-dasharray="2.4 2.2"/>
-    <text x="20" y="26" text-anchor="middle" font-family="var(--font-display)" font-size="17" font-weight="700" fill="var(--void)">É</text>
+    <text x="20" y="26" text-anchor="middle" font-family="var(--font-display)" font-size="17" font-weight="700" fill="var(--void)">S</text>
   </svg>`;
 }
 
@@ -1660,7 +1660,7 @@ function generateGroceryListText(){
     if(!byCat[it.cat]) byCat[it.cat] = [];
     byCat[it.cat].push(it);
   });
-  let out = `LISTE DE COURSES — Académie Étoile\n\n`;
+  let out = `LISTE DE COURSES — Scream Gym\n\n`;
   GROCERY_CAT_ORDER.forEach(cat => {
     if(!byCat[cat] || !byCat[cat].length) return;
     out += `== ${cat.toUpperCase()} ==\n`;
@@ -1670,7 +1670,7 @@ function generateGroceryListText(){
     });
     out += `\n`;
   });
-  out += `— Académie Étoile —\n`;
+  out += `— Scream Gym —\n`;
   return out;
 }
 
@@ -1911,7 +1911,7 @@ function dailyLogTotals(){
 }
 
 const WEEKLY_MENUS = [
-  { name: "Semaine Étoile Filante",
+  { name: "Semaine Scream Gym",
     days: [
       { day:"Lundi",
         breakfast:{ name:"Bol d'avoine au skyr et myrtilles", items:["flocons d'avoine","skyr","myrtilles","amandes","cannelle"] },
@@ -2106,7 +2106,7 @@ function generateShoppingListText(weekIndex){
     });
     out += `\n`;
   });
-  out += `— Académie Étoile —\n`;
+  out += `— Scream Gym —\n`;
   return out;
 }
 
@@ -2357,12 +2357,12 @@ function renderCategoryBodyMap(containerId, categoryKey){
    ========================================================= */
 
 const AVATAR_STAGES = [
-  { minLevel: 1,  label: "Bourgeon",             accent: "#b8a3c9" },
-  { minLevel: 3,  label: "Étincelle",             accent: "#8fb8f0" },
-  { minLevel: 6,  label: "Étoile Filante",        accent: "#e0609e" },
-  { minLevel: 10, label: "Gardienne Céleste",     accent: "#c9a8f5" },
-  { minLevel: 15, label: "Prêtresse des Étoiles", accent: "#ff8fc7" },
-  { minLevel: 20, label: "Légende Scintillante",  accent: "#e8c9ff" },
+  { minLevel: 1,  label: "Victime",              accent: "#8a7d78" },
+  { minLevel: 3,  label: "Survivante",            accent: "#a30000" },
+  { minLevel: 6,  label: "Chasseuse de Frissons", accent: "#c41e2f" },
+  { minLevel: 10, label: "Reine du Massacre",     accent: "#8b1a1a" },
+  { minLevel: 15, label: "Ombre Sanglante",       accent: "#5c2b2b" },
+  { minLevel: 20, label: "Légende du Slasher",    accent: "#c9a35d" },
 ];
 
 function avatarStageIndex(level){
@@ -2613,6 +2613,6 @@ function generateRecipesText(weekIndex){
       out += (RECIPES[meal.name] || "Recette non disponible.") + "\n\n";
     });
   });
-  out += `— Académie Étoile —\n`;
+  out += `— Scream Gym —\n`;
   return out;
 }

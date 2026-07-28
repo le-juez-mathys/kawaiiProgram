@@ -1,13 +1,13 @@
 {
-  "name": "Académie Étoile",
-  "short_name": "Étoile",
-  "description": "Ta quête scintillante, façon RPG kawaii.",
+  "name": "Scream Gym",
+  "short_name": "Scream",
+  "description": "Ta quête sanglante, façon RPG slasher.",
   "start_url": "index.html",
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1b1224",
-  "theme_color": "#1b1224",
+  "background_color": "#0a0808",
+  "theme_color": "#0a0808",
   "icons": [
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },

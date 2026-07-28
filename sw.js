@@ -1,4 +1,4 @@
-const CACHE_NAME = "academie-etoile-v4";
+const CACHE_NAME = "scream-gym-v5";
 const CORE_ASSETS = [
   "index.html",
   "nutrition.html",
