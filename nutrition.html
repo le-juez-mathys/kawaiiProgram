@@ -83,6 +83,16 @@
     </div>
 
     <div class="altar">
+      <div class="form-row" style="max-width:260px;">
+        <label for="meal-type-select">Ce repas, c'est...</label>
+        <select id="meal-type-select">
+          <option value="Petit-déjeuner">Petit-déjeuner</option>
+          <option value="Déjeuner" selected>Déjeuner</option>
+          <option value="Dîner">Dîner</option>
+          <option value="Collation">Collation</option>
+        </select>
+      </div>
+
       <div class="mode-toggle">
         <button class="mode-btn active" id="mode-normal" onclick="setDietMode('normal')">Normal</button>
         <button class="mode-btn" id="mode-seche" onclick="setDietMode('seche')">Sèche</button>
@@ -178,6 +188,52 @@
         <button class="btn" onclick="addBreakfastToList()">Ajouter à ma liste de courses ✨</button>
         <button class="btn secondary" onclick="eatBreakfast()" title="Compte ce petit-déjeuner dans ton total calorique du jour">🍽 J'ai mangé ce petit-déj</button>
         <button class="btn secondary" onclick="consumeBreakfastFromStock()" title="Retire directement ces quantités de ton stock">Consommer depuis mon stock</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="rune-mark">Hors catalogue</div>
+      <h2>Enregistrement rapide</h2>
+      <p class="lede">Un plat maison, un resto, un shaker ou une barre protéinée qui ne sont pas dans le catalogue ? Renseigne juste le nom, le grammage et les calories (et les protéines si tu les connais), et c'est compté directement dans ton journal du jour.</p>
+    </div>
+    <div class="altar">
+      <div class="meal-select-row">
+        <label>Type</label>
+        <select id="quick-type">
+          <option value="Petit-déjeuner">Petit-déjeuner</option>
+          <option value="Déjeuner" selected>Déjeuner</option>
+          <option value="Dîner">Dîner</option>
+          <option value="Collation">Collation</option>
+          <option value="Shaker">Shaker</option>
+          <option value="Barre protéinée">Barre protéinée</option>
+        </select>
+      </div>
+      <div class="meal-select-row">
+        <label>Nom</label>
+        <input type="text" id="quick-name" placeholder="ex: Poulet-frites maison" style="flex:1; min-width:180px; background:var(--track); border:1px solid var(--iron-light); color:var(--parchment); padding:8px 10px; border-radius:14px; font-family:var(--font-body); font-size:14px;">
+      </div>
+      <div class="meal-select-row">
+        <label>Grammage (g)</label>
+        <input type="number" id="quick-grams" min="0" step="10" placeholder="ex: 350">
+        <span class="unit-label">optionnel, pour ton info</span>
+      </div>
+      <div class="meal-select-row">
+        <label>Calories</label>
+        <input type="number" id="quick-kcal" min="0" step="10" placeholder="ex: 620">
+        <span class="unit-label">kcal</span>
+      </div>
+      <div class="meal-select-row">
+        <label>Protéines</label>
+        <input type="number" id="quick-protein" min="0" step="1" placeholder="ex: 28">
+        <span class="unit-label">g (optionnel)</span>
+      </div>
+      <button class="btn" onclick="logQuickEntry()">Enregistrer ✨</button>
+
+      <div style="margin-top:22px;">
+        <div class="form-row" style="margin-bottom:10px;"><label>Tes plats enregistrés — clique pour recompter</label></div>
+        <div id="saved-meals-list"></div>
       </div>
     </div>
   </div>
@@ -424,15 +480,67 @@
     showSimpleToast("Repas retiré de ton stock");
   }
 
+  function logQuickEntry(){
+    const type = document.getElementById("quick-type").value;
+    const name = document.getElementById("quick-name").value.trim();
+    const grams = parseFloat(document.getElementById("quick-grams").value) || null;
+    const kcal = parseFloat(document.getElementById("quick-kcal").value) || 0;
+    const protein = parseFloat(document.getElementById("quick-protein").value) || 0;
+
+    if(!name){ showSimpleToast("Donne un nom à ce repas ou ce produit."); return; }
+    if(!kcal){ showSimpleToast("Renseigne au moins les calories."); return; }
+
+    const result = logQuickItem(type, name, grams, kcal, protein);
+    saveMealTemplate(type, name, grams, kcal, protein);
+    renderSavedMeals();
+    showSimpleToast(`${type} compté : +${result.kcal} kcal${result.protein ? " · +"+result.protein+"g protéines" : ""} (voir la page Suivi)`);
+
+    document.getElementById("quick-name").value = "";
+    document.getElementById("quick-grams").value = "";
+    document.getElementById("quick-kcal").value = "";
+    document.getElementById("quick-protein").value = "";
+  }
+
+  function renderSavedMeals(){
+    const el = document.getElementById("saved-meals-list");
+    if(!state.savedMeals || state.savedMeals.length === 0){
+      el.innerHTML = '<div class="empty-note">Aucun plat enregistré pour l\'instant — le premier "Enregistrer" ci-dessus l\'ajoutera ici pour la prochaine fois.</div>';
+      return;
+    }
+    const sorted = [...state.savedMeals].sort((a,b) => a.name.localeCompare(b.name));
+    el.innerHTML = sorted.map(m => `
+      <div class="saved-meal-card" onclick="useSavedMeal('${m.id}')">
+        <div class="sm-info">
+          <div class="sm-name">${m.name}</div>
+          <div class="sm-meta">${m.mealType}${m.grams ? " · " + m.grams + "g" : ""}</div>
+        </div>
+        <div class="sm-macro">${m.kcal} kcal${m.protein ? " · " + m.protein + "g prot" : ""}</div>
+        <button class="sm-remove" title="Retirer ce plat enregistré" onclick="event.stopPropagation(); removeSavedMealAndRender('${m.id}')">✕</button>
+      </div>
+    `).join("");
+  }
+
+  function useSavedMeal(id){
+    const result = logSavedMeal(id);
+    if(!result) return;
+    showSimpleToast(`Compté à nouveau : +${result.kcal} kcal${result.protein ? " · +"+result.protein+"g protéines" : ""} (voir la page Suivi)`);
+  }
+
+  function removeSavedMealAndRender(id){
+    removeMealTemplate(id);
+    renderSavedMeals();
+  }
+
   function eatCurrentMeal(){
     const parts = getComposedMealParts();
     if(!parts){
       showSimpleToast("Choisis une protéine, un féculent, un légume, une sauce ET un accompagnement d'abord.");
       return;
     }
+    const mealType = document.getElementById("meal-type-select").value;
     const items = [parts.protein, parts.starch, parts.vegetable, parts.sauce, parts.seasoning];
-    const { kcal, protein } = logMealCalories(`Repas — ${parts.protein.name}`, items);
-    showSimpleToast(`Repas compté : +${kcal} kcal · +${protein}g protéines aujourd'hui (voir la page Suivi)`);
+    const { kcal, protein } = logMealCalories(`${mealType} — ${parts.protein.name}`, items);
+    showSimpleToast(`${mealType} compté : +${kcal} kcal · +${protein}g protéines aujourd'hui (voir la page Suivi)`);
   }
 
   /* ---------- Petit-déjeuner ---------- */
@@ -661,6 +769,7 @@
     safeRun(renderStock, "renderStock");
     safeRun(renderStockAddOptions, "renderStockAddOptions");
     safeRun(renderSnacks, "renderSnacks");
+    safeRun(renderSavedMeals, "renderSavedMeals");
   })();
 
 

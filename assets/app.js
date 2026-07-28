@@ -303,6 +303,7 @@ function defaultState(){
     groceryList: [],
     stock: {},
     supplements: defaultSupplementsState(),
+    savedMeals: [],
     dailyLog: defaultDailyLogState(),
     dailyBurn: defaultDailyBurnState(),
     profile: { poids: null, taille: null, age: null, activite: 1.45, deficit: 500, sexe: "femme" },
@@ -352,6 +353,7 @@ async function loadState(){
     if(!state.groceryList) state.groceryList = [];
     if(!state.stock) state.stock = {};
     if(!state.supplements) state.supplements = defaultSupplementsState();
+    if(!state.savedMeals) state.savedMeals = [];
     if(!state.dailyLog) state.dailyLog = defaultDailyLogState();
     if(!state.dailyBurn) state.dailyBurn = defaultDailyBurnState();
     if(!state.profile) state.profile = { poids: null, taille: null, age: null, activite: 1.45, deficit: 500, sexe: "femme" };
@@ -1723,6 +1725,51 @@ function logMealCalories(label, items){
   state.dailyLog.entries.push({ label, items: detail, kcal, protein, time: new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) });
   saveState();
   return { kcal, protein };
+}
+
+/* Enregistrement rapide : pour un repas fait maison / au restaurant, ou un shaker /
+   une barre protéinée, quand on connaît juste le grammage, les calories et les
+   protéines mais que l'aliment n'est pas dans le catalogue. Un seul système,
+   utilisable de la même façon pour n'importe quel type de repas ou supplément. */
+function logQuickItem(mealType, name, grams, kcal, protein){
+  ensureDailyLogToday();
+  const kcalVal = Math.round(kcal) || 0;
+  const proteinVal = Math.round((protein || 0) * 10) / 10;
+  const gramsNote = grams ? ` (${grams}g)` : "";
+  const item = { name, qty: grams || null, unit: grams ? "g" : null, kcal: kcalVal, protein: proteinVal };
+  state.dailyLog.entries.push({
+    label: `${mealType} — ${name}${gramsNote}`,
+    items: [item], kcal: kcalVal, protein: proteinVal,
+    time: new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+  });
+  saveState();
+  return { kcal: kcalVal, protein: proteinVal };
+}
+
+/* ---------- Plats enregistrés (favoris réutilisables en un clic) ----------
+   Contrairement au journal du jour, cette liste ne se réinitialise jamais :
+   c'est un catalogue personnel qui s'enrichit à chaque enregistrement rapide,
+   pour pouvoir recompter le même plat/shaker/barre sans tout retaper. */
+function saveMealTemplate(mealType, name, grams, kcal, protein){
+  const key = (mealType + "__" + name).toLowerCase();
+  const existing = state.savedMeals.find(m => (m.mealType + "__" + m.name).toLowerCase() === key);
+  if(existing){
+    existing.grams = grams; existing.kcal = kcal; existing.protein = protein;
+  } else {
+    state.savedMeals.push({ id: Date.now() + Math.random().toString(36).slice(2,7), mealType, name, grams, kcal, protein });
+  }
+  saveState();
+}
+
+function removeMealTemplate(id){
+  state.savedMeals = state.savedMeals.filter(m => m.id !== id);
+  saveState();
+}
+
+function logSavedMeal(id){
+  const meal = state.savedMeals.find(m => m.id === id);
+  if(!meal) return null;
+  return logQuickItem(meal.mealType, meal.name, meal.grams, meal.kcal, meal.protein);
 }
 
 function removeDailyLogEntry(index){
