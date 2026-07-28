@@ -420,6 +420,15 @@ footer{text-align:center; padding:30px 20px; color:var(--parchment-dim); font-si
 .zone-select-card{cursor:pointer; text-align:center; padding:16px 10px;}
 .zone-select-card.active{border-color:var(--gold); background:rgba(201,147,46,0.1);}
 
+.zone-list{display:flex; flex-direction:column; margin-top:18px; border-radius:18px; overflow:hidden; border:1px solid var(--iron);}
+.zone-list-row{display:flex; align-items:center; gap:14px; padding:10px 16px; cursor:pointer; border-bottom:1px solid var(--iron); background:var(--panel); transition:background .15s ease;}
+.zone-list-row:last-child{border-bottom:none;}
+.zone-list-row:hover{background:rgba(201,147,46,0.06);}
+.zone-list-row.active{background:rgba(201,147,46,0.14); box-shadow:inset 3px 0 0 var(--gold);}
+.zone-icon-circle{width:58px; height:58px; min-width:58px; border-radius:50%; background:#fff8f4; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+.zone-list-label{flex:1; font-family:var(--font-display); font-size:15px; letter-spacing:0.3px; color:var(--parchment);}
+.zone-list-arrow{color:var(--gold-bright); font-size:19px; font-family:var(--font-display); min-width:20px; text-align:center;}
+
 /* ---------- AVATAR ---------- */
 .avatar-panel{
   background:var(--panel); border:1px solid var(--iron); border-radius:18px; padding:24px;

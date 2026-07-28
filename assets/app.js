@@ -218,6 +218,15 @@ const PROGRAM = {
       ["Mobilité hanches / épaules", "1", "10 min", "Mouvements circulaires et amplitudes contrôlées pour entretenir la mobilité des hanches et des épaules, essentielles pour bien exécuter Hip Thrust, Squat et Chest Press.", "mobility", ["epaules","fessiersischios"]],
       ["Respiration / relâchement", "1", "5 min", "Quelques minutes de respiration profonde et de relâchement musculaire pour faire baisser le stress, le cortisol et améliorer la récupération.", "breathing", []],
     ]
+  },
+  forearms: {
+    title: "Avant-bras",
+    exos: [
+      ["Curl de poignet (haltères sur banc)", "3", "15-20", "Assise, avant-bras posés sur les cuisses ou un banc, paumes vers le haut, tu fléchis les poignets pour lever les haltères. Cible les fléchisseurs de l'avant-bras.", "dumbbell", ["avantbras"]],
+      ["Curl de poignet inversé (haltères sur banc)", "3", "15-20", "Même position, mais paumes vers le bas : tu relèves les poignets vers toi. Cible les extenseurs de l'avant-bras, souvent négligés alors qu'ils équilibrent la poigne.", "dumbbell", ["avantbras"]],
+      ["Enroulement de poignet à la poulie basse", "3", "15-20", "Face à la poulie basse, barre tenue en pronation, tu enroules le poignet vers le haut contre la résistance. Version guidée et progressive du curl de poignet.", "cable-pulley", ["avantbras"]],
+      ["Portée lourde (Farmer's walk, haltères)", "3", "30-40m", "Un haltère lourd dans chaque main, tu marches sur une distance donnée en gardant le dos droit et les épaules basses. Renforce la force de préhension et l'ensemble de l'avant-bras.", "dumbbell", ["avantbras"]],
+    ]
   }
 };
 
@@ -229,6 +238,7 @@ const CATEGORY_META = {
   legs:      { label: "Jambes",          stat: "force",      page: "corps.html" },
   cardio:    { label: "Cardio & Abdos",  stat: "endurance",  page: "corps.html" },
   mobility:  { label: "Mobilité",        stat: "vitalite",   page: "corps.html" },
+  forearms:  { label: "Avant-bras",      stat: "force",      page: "corps.html" },
   corps:     { label: "Entraînement ciblé", stat: "force",   page: "corps.html" },
   libre:     { label: "Séance libre",    stat: "discipline", page: "custom.html" },
   nutrition: { label: "Provisions",      stat: "vitalite",   page: "nutrition.html" },
@@ -409,6 +419,7 @@ function statGainsFor(categoryKey){
     case "legs": return { force: 4, endurance: 2, vitalite: 0, discipline: 1 };
     case "cardio": return { force: 0, endurance: 4, vitalite: 1, discipline: 1 };
     case "mobility": return { force: 0, endurance: 1, vitalite: 2, discipline: 1 };
+    case "forearms": return { force: 2, endurance: 1, vitalite: 0, discipline: 1 };
     case "nutrition": return { force: 0, endurance: 0, vitalite: 3, discipline: 2 };
     default: return { force: 1, endurance: 1, vitalite: 1, discipline: 1 };
   }
@@ -2051,8 +2062,10 @@ function zoneThumbSVG(zoneKeys){
       <circle cx="76" cy="38" r="9" fill="${fill('epaules')}"/>
       <rect x="34" y="36" width="32" height="20" rx="5" fill="${fill('pecs')}"/>
       <rect x="35" y="58" width="30" height="28" rx="5" fill="${fill('abdos')}"/>
-      <rect x="14" y="42" width="9" height="28" rx="4" fill="${fill('biceps')}"/>
-      <rect x="77" y="42" width="9" height="28" rx="4" fill="${fill('biceps')}"/>
+      <rect x="14" y="42" width="9" height="22" rx="4" fill="${fill('biceps')}"/>
+      <rect x="77" y="42" width="9" height="22" rx="4" fill="${fill('biceps')}"/>
+      <rect x="13" y="65" width="9" height="20" rx="4" fill="${fill('avantbras')}"/>
+      <rect x="78" y="65" width="9" height="20" rx="4" fill="${fill('avantbras')}"/>
       <rect x="33" y="88" width="15" height="36" rx="6" fill="${fill('quadriceps')}"/>
       <rect x="52" y="88" width="15" height="36" rx="6" fill="${fill('quadriceps')}"/>
     </svg>`;
@@ -2066,6 +2079,76 @@ function zoneThumbSVG(zoneKeys){
     <rect x="30" y="88" width="40" height="24" rx="8" fill="${fill('fessiersischios')}"/>
     <rect x="33" y="112" width="15" height="20" rx="6" fill="${fill('mollets')}"/>
     <rect x="52" y="112" width="15" height="20" rx="6" fill="${fill('mollets')}"/>
+  </svg>`;
+}
+
+/* Icône circulaire "mannequin" pour le sélecteur de zone de la page Entraînement :
+   silhouette du corps (face ou dos selon la zone) avec la zone ciblée en rouge. */
+function zoneIconSVG(zoneKey){
+  if(zoneKey === "cardio"){
+    return `<svg viewBox="0 0 100 100" width="34" height="34">
+      <path d="M20 46 L36 46 L44 30 L54 64 L62 46 L80 46" fill="none" stroke="var(--ember-bright)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M50 80 C24 60 12 42 12 28 C12 15 22 8 33 8 C42 8 50 15 50 24 C50 15 58 8 67 8 C78 8 88 15 88 28 C88 42 76 60 50 80 Z" fill="none" stroke="var(--iron-light)" stroke-width="5"/>
+    </svg>`;
+  }
+  if(zoneKey === "mobility"){
+    return `<svg viewBox="0 0 100 100" width="34" height="34">
+      <circle cx="50" cy="50" r="34" fill="none" stroke="var(--iron-light)" stroke-width="6" stroke-dasharray="7 6"/>
+      <path d="M50 16 A34 34 0 1 1 21 68" fill="none" stroke="var(--ember-bright)" stroke-width="6" stroke-linecap="round"/>
+      <path d="M50 16 l11 -8 M50 16 l-4 -13" stroke="var(--ember-bright)" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </svg>`;
+  }
+  const zone = ZONE_EXERCISES[zoneKey];
+  const isFront = !zone || zone.view === "front";
+  const fill = (z) => z === zoneKey ? "var(--ember-bright)" : "var(--iron-light)";
+  const body = "var(--iron)";
+
+  if(isFront){
+    return `<svg viewBox="0 0 100 150" width="42" height="63">
+      <circle cx="50" cy="13" r="11" fill="${body}"/>
+      <path d="M44,22 L56,22 L54,28 L46,28 Z" fill="${body}"/>
+      <path d="M30,28 C30,26 34,25 38,25 L62,25 C66,25 70,26 70,28
+               L73,46 C74,57 71,67 66,73
+               L68,86 L32,86 L34,73
+               C29,67 26,57 27,46 Z" fill="${body}"/>
+      <path d="M14,36 Q11,33 13,29 L22,29 Q25,33 22,38 L20,58 L15,58 Z" fill="${fill('biceps')}"/>
+      <path d="M78,38 Q75,33 78,29 L87,29 Q89,33 86,36 L85,58 L80,58 Z" fill="${fill('biceps')}"/>
+      <circle cx="17" cy="33" r="8" fill="${fill('epaules')}"/>
+      <circle cx="83" cy="33" r="8" fill="${fill('epaules')}"/>
+      <path d="M15,60 L20,60 L19,82 Q19,86 16,86 Q13,86 13,82 Z" fill="${fill('avantbras')}"/>
+      <path d="M80,60 L85,60 L84,82 Q84,86 81,86 Q78,86 78,82 Z" fill="${fill('avantbras')}"/>
+      <circle cx="16" cy="89" r="4" fill="${body}"/>
+      <circle cx="84" cy="89" r="4" fill="${body}"/>
+      <path d="M36,31 Q50,27 64,31 L63,49 Q50,53 37,49 Z" fill="${fill('pecs')}"/>
+      <path d="M38,52 L62,52 L60,80 Q50,84 40,80 Z" fill="${fill('abdos')}"/>
+      <line x1="50" y1="52" x2="50" y2="80" stroke="${body}" stroke-width="1.6"/>
+      <line x1="39" y1="61" x2="61" y2="61" stroke="${body}" stroke-width="1.6"/>
+      <line x1="39.5" y1="70" x2="60.5" y2="70" stroke="${body}" stroke-width="1.6"/>
+      <path d="M33,88 L48,88 L45,116 L35,116 Z" fill="${fill('quadriceps')}"/>
+      <path d="M52,88 L67,88 L65,116 L55,116 Z" fill="${fill('quadriceps')}"/>
+      <path d="M35,118 L45,118 L44,142 L37,142 Z" fill="${body}"/>
+      <path d="M55,118 L65,118 L63,142 L56,142 Z" fill="${body}"/>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 100 150" width="42" height="63">
+    <circle cx="50" cy="13" r="11" fill="${body}"/>
+    <path d="M44,22 L56,22 L54,28 L46,28 Z" fill="${body}"/>
+    <path d="M30,28 C30,26 34,25 38,25 L62,25 C66,25 70,26 70,28
+             L73,46 C74,57 71,67 66,73
+             L68,86 L32,86 L34,73
+             C29,67 26,57 27,46 Z" fill="${body}"/>
+    <path d="M14,36 Q11,33 13,29 L22,29 Q25,33 22,38 L20,58 L15,58 Z" fill="${fill('triceps')}"/>
+    <path d="M78,38 Q75,33 78,29 L87,29 Q89,33 86,36 L85,58 L80,58 Z" fill="${fill('triceps')}"/>
+    <circle cx="17" cy="33" r="8" fill="${fill('epaules')}"/>
+    <circle cx="83" cy="33" r="8" fill="${fill('epaules')}"/>
+    <path d="M15,60 L20,60 L19,82 Q19,86 16,86 Q13,86 13,82 Z" fill="${fill('avantbras')}"/>
+    <path d="M80,60 L85,60 L84,82 Q84,86 81,86 Q78,86 78,82 Z" fill="${fill('avantbras')}"/>
+    <circle cx="16" cy="89" r="4" fill="${body}"/>
+    <circle cx="84" cy="89" r="4" fill="${body}"/>
+    <path d="M35,29 L65,29 L70,49 Q50,59 30,49 Z" fill="${fill('dos')}"/>
+    <path d="M31,88 Q50,82 69,88 L67,110 Q50,116 33,110 Z" fill="${fill('fessiersischios')}"/>
+    <path d="M35,112 L47,112 L45,142 L37,142 Z" fill="${fill('mollets')}"/>
+    <path d="M53,112 L65,112 L63,142 L55,142 Z" fill="${fill('mollets')}"/>
   </svg>`;
 }
 
@@ -2083,6 +2166,7 @@ const ZONE_EXERCISES = {
   triceps:        { label: "Triceps",          view: "back",  exos: ["Extension triceps à la poulie haute", "Développé serré à la Smith Machine", "Extension triceps nuque (haltère)"] },
   fessiersischios:{ label: "Fessiers & Ischios", view: "back", exos: ["Hip Thrust (Smith Machine ou barre)", "Leg Press (presse à cuisses)", "Seated Leg Curl (ischios, machine)", "Abduction de hanche (machine)"] },
   mollets:        { label: "Mollets",          view: "back",  exos: ["Mollets debout (machine ou Smith Machine)"] },
+  avantbras:      { label: "Avant-bras",       view: "front", exos: ["Curl de poignet (haltères sur banc)", "Curl de poignet inversé (haltères sur banc)", "Enroulement de poignet à la poulie basse", "Portée lourde (Farmer's walk, haltères)"] },
 };
 
 const CATEGORY_ZONES = {

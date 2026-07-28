@@ -33,7 +33,7 @@
 
     <div class="bodymap-wrap" id="bodymap"></div>
 
-    <div class="zone-grid" id="zone-grid"></div>
+    <div class="zone-list" id="zone-grid"></div>
 
     <div id="zone-suggestions" style="margin-top:24px;"></div>
   </div>
@@ -75,8 +75,10 @@
   function renderZoneGrid(){
     const grid = document.getElementById("zone-grid");
     grid.innerHTML = trainingZoneList().map(zone => `
-      <div class="zone-card zone-select-card ${selectedZones.includes(zone.key) ? 'active' : ''}" onclick="toggleZone('${zone.key}')">
-        <div class="zc-label">${zone.label}</div>
+      <div class="zone-list-row ${selectedZones.includes(zone.key) ? 'active' : ''}" onclick="toggleZone('${zone.key}')">
+        <div class="zone-icon-circle">${zoneIconSVG(zone.key)}</div>
+        <div class="zone-list-label">${zone.label}</div>
+        <div class="zone-list-arrow">${selectedZones.includes(zone.key) ? '✓' : '›'}</div>
       </div>
     `).join("");
   }
