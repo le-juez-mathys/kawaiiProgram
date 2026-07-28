@@ -51,12 +51,23 @@
        match /etoile_characters/{uid} {
          allow read, write: if request.auth != null && request.auth.uid == uid;
        }
+       match /sharedCoins/{doc} {
+         allow read, write: if true;
+       }
      }
    }
 
-   Avec la connexion Google, ces règles sont réellement sécurisées :
-   seule la personne connectée avec son propre compte Google peut lire
-   ou modifier sa propre sauvegarde. Personne d'autre n'y a accès.
+   Avec la connexion Google, la sauvegarde de personnage (etoile_characters/{uid})
+   est réellement sécurisée : seule la personne connectée avec son propre
+   compte Google peut lire ou modifier sa propre sauvegarde.
+
+   La collection "sharedCoins" (le compteur de pièces communes utilisé par
+   "Le Trésor Commun") est volontairement ouverte en lecture ET écriture :
+   c'est un simple compteur de points sans données sensibles, partagé entre
+   les deux jeux et le site de récompenses, et ça évite d'avoir à gérer une
+   authentification croisée entre trois projets Firebase différents pour
+   un outil à usage strictement personnel. Si tu veux la restreindre plus
+   tard, ajoute une App Check ou un mot de passe partagé dans les règles.
    ========================================================= */
 
 const firebaseConfig = {

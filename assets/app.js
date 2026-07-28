@@ -89,6 +89,61 @@ async function cloudSet(uid, stateObj){
     return false;
   }
 }
+
+/* ---------- Pièces communes (Le Trésor Commun) ----------
+   1 pièce tous les 300 XP cumulés. C'est une monnaie PARTAGÉE : une fois
+   gagnée ici, elle peut être dépensée depuis "Le Trésor Commun" (le site
+   compagnon des deux jeux). On ne garde donc localement qu'un cache
+   d'affichage (coinsCache) + le compteur de pièces déjà accordées depuis
+   l'XP (coinsGranted) ; le vrai solde vit dans Firestore, INCRÉMENTÉ
+   (jamais réécrit en dur) pour ne jamais effacer une dépense faite ailleurs. */
+const COINS_PER_XP = 300;
+const SHARED_COIN_DOC = "kawaii";
+
+async function cloudGetSharedCoins(){
+  if(!isCloudConfigured()) return null;
+  try{
+    const snap = await db.collection("sharedCoins").doc(SHARED_COIN_DOC).get();
+    return snap.exists ? snap.data() : null;
+  }catch(e){
+    console.warn("Lecture des pièces partagées indisponible :", e);
+    return null;
+  }
+}
+
+function cloudIncrementSharedCoins(delta){
+  if(!isCloudConfigured() || !delta) return;
+  db.collection("sharedCoins").doc(SHARED_COIN_DOC).set({
+    coins: firebase.firestore.FieldValue.increment(delta),
+    name: "Étoile Filante",
+    updatedAt: new Date().toISOString()
+  }, { merge: true }).catch(e => console.warn("Envoi des pièces indisponible :", e));
+}
+
+async function refreshCoinsCache(){
+  const shared = await cloudGetSharedCoins();
+  if(shared && typeof shared.coins === "number"){
+    state.coinsCache = shared.coins;
+    saveState();
+  }
+  return state.coinsCache;
+}
+
+/* Convertit l'XP cumulé en pièces, une seule fois par palier de 300 XP.
+   Appelée à chaque gain d'XP ET une fois au chargement (pour convertir
+   d'un coup l'XP déjà accumulé avant l'existence de ce système). */
+function grantCoinsFromXP(){
+  const totalCoinsEver = Math.floor(state.totalXPEarned / COINS_PER_XP);
+  if(totalCoinsEver > state.coinsGranted){
+    const delta = totalCoinsEver - state.coinsGranted;
+    state.coinsGranted = totalCoinsEver;
+    state.coinsCache = (state.coinsCache || 0) + delta;
+    cloudIncrementSharedCoins(delta);
+    return delta;
+  }
+  return 0;
+}
+
 const DB_NAME = "etoileAcademyDB";
 const DB_STORE = "kv";
 const DB_VERSION = 1;
@@ -314,6 +369,8 @@ function defaultState(){
     stock: {},
     supplements: defaultSupplementsState(),
     savedMeals: [],
+    coinsGranted: 0,
+    coinsCache: 0,
     dailyLog: defaultDailyLogState(),
     dailyBurn: defaultDailyBurnState(),
     profile: { poids: null, taille: null, age: null, activite: 1.45, deficit: 500, sexe: "femme" },
@@ -372,7 +429,16 @@ async function loadState(){
     if(!state.burnGoal) state.burnGoal = { kcalPerDay: null };
     if(state.firstLogDate === undefined) state.firstLogDate = null;
     if(state.totalXPEarned === undefined) state.totalXPEarned = 0;
+    if(state.coinsGranted === undefined) state.coinsGranted = 0;
+    if(state.coinsCache === undefined) state.coinsCache = 0;
     if(!state.updatedAt) state.updatedAt = new Date().toISOString();
+
+    // Convertit d'un coup l'XP déjà accumulé en pièces si ce n'est pas déjà fait
+    // (première ouverture après l'ajout du système de pièces), puis se resynchronise
+    // avec le vrai solde partagé (qui peut avoir baissé si des pièces ont été
+    // dépensées depuis "Le Trésor Commun").
+    grantCoinsFromXP();
+    refreshCoinsCache();
 
     // Garde le cache local et le cloud alignés l'un sur l'autre, quelle que
     // soit la source retenue ci-dessus.
@@ -458,6 +524,7 @@ function applyXP(xp){
     leveledUp = true;
     needed = xpNeededFor(state.level);
   }
+  grantCoinsFromXP();
   return leveledUp;
 }
 
@@ -1052,6 +1119,15 @@ function closeMobileDrawer(){
   overlay.classList.remove("open");
 }
 
+function coinIconSVG(size){
+  size = size || 20;
+  return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" style="vertical-align:-4px;">
+    <circle cx="20" cy="20" r="18" fill="var(--gold)" stroke="var(--gold-bright)" stroke-width="2"/>
+    <circle cx="20" cy="20" r="13" fill="none" stroke="var(--gold-bright)" stroke-width="1.4" stroke-dasharray="2.4 2.2"/>
+    <text x="20" y="26" text-anchor="middle" font-family="var(--font-display)" font-size="17" font-weight="700" fill="var(--void)">É</text>
+  </svg>`;
+}
+
 function renderMiniBar(){
   const needed = xpNeededFor(state.level);
   const pct = Math.min(100, Math.round((state.xp / needed) * 100));
@@ -1065,6 +1141,7 @@ function renderMiniBar(){
         <div class="mb-xptrack"><div class="mb-xpfill" style="width:${pct}%"></div></div>
         <div class="mb-xplabel"><span>${state.xp} XP</span><span>${needed} XP pour le niveau suivant</span></div>
       </div>
+      <div class="mb-coins" title="1 pièce tous les 300 XP — à dépenser sur Le Trésor Commun">${coinIconSVG(22)} <b>${state.coinsCache || 0}</b></div>
       <div class="mb-streak">Séquence : <b>${state.streak}${state.streak===1?" jour":" jours"}</b></div>
     </div>
   `;
