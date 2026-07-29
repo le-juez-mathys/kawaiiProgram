@@ -118,6 +118,10 @@ a{color:inherit;}
 .xp-track{background:var(--track); border:1px solid var(--iron); border-radius:20px; height:18px; overflow:hidden; margin-bottom:6px;}
 .xp-fill{height:100%; background:linear-gradient(90deg, var(--ember), var(--gold-bright)); border-radius:20px; transition:width .6s ease;}
 .xp-label{font-family:var(--font-mono); font-size:11px; color:var(--parchment-dim); display:flex; justify-content:space-between; margin-bottom:18px;}
+.coin-panel{background:var(--void); border:1px solid var(--iron); border-radius:8px; padding:14px 16px; margin-bottom:18px;}
+.coin-panel-top{display:flex; align-items:center; gap:12px; margin-bottom:10px;}
+.coin-panel-count{font-family:var(--font-display); font-size:20px; color:var(--gold-bright);}
+.coin-panel-hint{font-family:var(--font-mono); font-size:10.5px; color:var(--parchment-dim); margin-top:2px;}
 
 .stat-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:18px;}
 .stat{background:var(--panel-raised); border:1px solid var(--iron); border-radius:16px; padding:14px 16px;}

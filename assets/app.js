@@ -1343,6 +1343,8 @@ function renderFullSheet(elId){
   const el = document.getElementById(elId);
   const needed = xpNeededFor(state.level);
   const pct = Math.min(100, Math.round((state.xp / needed) * 100));
+  const coinXP = state.totalXPEarned % COINS_PER_XP;
+  const coinPct = Math.round((coinXP / COINS_PER_XP) * 100);
   el.innerHTML = `
     <div class="sheet-top">
       <div class="title-block">
@@ -1353,6 +1355,17 @@ function renderFullSheet(elId){
     </div>
     <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
     <div class="xp-label"><span>${state.xp} XP</span><span>${needed} XP pour le niveau suivant</span></div>
+    <div class="coin-panel">
+      <div class="coin-panel-top">
+        ${coinIconSVG(30)}
+        <div>
+          <div class="coin-panel-count">${state.coinsCache || 0} pièce${(state.coinsCache||0)!==1?"s":""}</div>
+          <div class="coin-panel-hint">À dépenser sur Le Trésor Commun</div>
+        </div>
+      </div>
+      <div class="mb-cointrack"><div class="mb-coinfill" style="width:${coinPct}%"></div></div>
+      <div class="mb-coinlabel">${coinXP} / ${COINS_PER_XP} XP avant la prochaine pièce</div>
+    </div>
     <div class="stat-grid">
       ${["force","endurance","vitalite","discipline"].map(k => `
         <div class="stat" data-k="${k}">
@@ -1574,6 +1587,7 @@ const MEAL_VEGETABLES = [
   { name:"Roquette",              qty:80,  unit:"g", kcal:20,  protein:2.1 },
   { name:"Petits pois",           qty:150, unit:"g", kcal:122, protein:8.1 },
   { name:"Navet",                 qty:150, unit:"g", kcal:42,  protein:1.4 },
+  { name:"Chou de Bruxelles",     qty:150, unit:"g", kcal:65,  protein:5.1 },
 ];
 
 // Sauces : pour napper/accompagner le repas (distinct des épices sèches).
