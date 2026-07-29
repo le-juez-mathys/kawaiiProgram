@@ -92,13 +92,13 @@ async function cloudSet(uid, stateObj){
 }
 
 /* ---------- Pièces communes (Le Trésor Commun) ----------
-   1 pièce tous les 300 XP cumulés. C'est une monnaie PARTAGÉE : une fois
+   1 pièce tous les 100 XP cumulés. C'est une monnaie PARTAGÉE : une fois
    gagnée ici, elle peut être dépensée depuis "Le Trésor Commun" (le site
    compagnon des deux jeux). On ne garde donc localement qu'un cache
    d'affichage (coinsCache) + le compteur de pièces déjà accordées depuis
    l'XP (coinsGranted) ; le vrai solde vit dans Firestore, INCRÉMENTÉ
    (jamais réécrit en dur) pour ne jamais effacer une dépense faite ailleurs. */
-const COINS_PER_XP = 300;
+const COINS_PER_XP = 100;
 const SHARED_COIN_DOC = "kawaii";
 
 async function cloudGetSharedCoins(){
@@ -126,7 +126,7 @@ async function refreshCoinsCache(){
   return state.coinsCache;
 }
 
-/* Convertit l'XP cumulé en pièces, une seule fois par palier de 300 XP.
+/* Convertit l'XP cumulé en pièces, une seule fois par palier de 100 XP.
    Appelée à chaque gain d'XP ET une fois au chargement (pour convertir
    d'un coup l'XP déjà accumulé avant l'existence de ce système). */
 function grantCoinsFromXP(){
@@ -1159,6 +1159,8 @@ function coinIconSVG(size){
 function renderMiniBar(){
   const needed = xpNeededFor(state.level);
   const pct = Math.min(100, Math.round((state.xp / needed) * 100));
+  const coinXP = state.totalXPEarned % COINS_PER_XP;
+  const coinPct = Math.round((coinXP / COINS_PER_XP) * 100);
   const syncLabel = {
     ok: '<span style="color:var(--green,#6fb890);">● pièces synchronisées</span>',
     error: '<span style="color:var(--blood);" title="Erreur Firestore — voir la console (F12)">⚠ erreur d\'envoi des pièces</span>',
@@ -1175,9 +1177,13 @@ function renderMiniBar(){
         <div class="mb-xptrack"><div class="mb-xpfill" style="width:${pct}%"></div></div>
         <div class="mb-xplabel"><span>${state.xp} XP</span><span>${needed} XP pour le niveau suivant</span></div>
       </div>
-      <div class="mb-coins" title="1 pièce tous les 300 XP — à dépenser sur Le Trésor Commun">
-        ${coinIconSVG(22)} <b>${state.coinsCache || 0}</b>
-        ${syncLabel ? `<span style="font-family:var(--font-mono); font-size:10px; margin-left:6px;">${syncLabel}</span>` : ""}
+      <div class="mb-coins" title="1 pièce tous les 100 XP — à dépenser sur Le Trésor Commun">
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${coinIconSVG(22)} <b>${state.coinsCache || 0}</b>
+          ${syncLabel ? `<span style="font-family:var(--font-mono); font-size:10px;">${syncLabel}</span>` : ""}
+        </div>
+        <div class="mb-cointrack"><div class="mb-coinfill" style="width:${coinPct}%"></div></div>
+        <div class="mb-coinlabel">${coinXP} / ${COINS_PER_XP} XP avant la prochaine pièce</div>
       </div>
       <div class="mb-streak">Séquence : <b>${state.streak}${state.streak===1?" jour":" jours"}</b></div>
     </div>

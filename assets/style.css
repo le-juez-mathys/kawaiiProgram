@@ -75,8 +75,11 @@ a{color:inherit;}
 .minibar .mb-xplabel{font-family:var(--font-mono); font-size:10px; color:var(--parchment-dim); margin-top:4px; display:flex; justify-content:space-between;}
 .minibar .mb-streak{font-family:var(--font-mono); font-size:11.5px; color:var(--parchment-dim); white-space:nowrap;}
 .minibar .mb-streak b{color:var(--gold-bright); font-weight:600;}
-.minibar .mb-coins{font-family:var(--font-mono); font-size:13px; color:var(--parchment); white-space:nowrap; display:flex; align-items:center; gap:5px;}
+.minibar .mb-coins{font-family:var(--font-mono); font-size:13px; color:var(--parchment); display:flex; flex-direction:column; gap:4px; min-width:170px;}
 .minibar .mb-coins b{color:var(--gold-bright); font-weight:700; font-size:14px;}
+.minibar .mb-cointrack{height:5px; background:var(--void); border-radius:6px; overflow:hidden;}
+.minibar .mb-coinfill{height:100%; background:linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius:6px; transition:width .4s ease;}
+.minibar .mb-coinlabel{font-family:var(--font-mono); font-size:10px; color:var(--parchment-dim); white-space:nowrap;}
 
 /* ---------- HERO ---------- */
 .hero{
